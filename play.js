@@ -209,7 +209,8 @@
     }
     App.markUsed(q().id);
     if (g.index >= g.total - 1) { g.finished = true; App.view = 'results'; App.save(); App.render(); return; }
-    g.index++; g.cur = fresh(); setTimer(); App.save(); App.resetScroll = true; App.render(); window.scrollTo(0, 0);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); /* close the keyboard */
+    g.index++; g.cur = fresh(); setTimer(); App.save(); App.resetScroll = true; App.render(); App.recentre(true); setTimeout(function () { App.recentre(true); }, 350);
   };
   /* Host: go back a question to fix a wrongly typed name. Its scores stay; tap a scored name to take it back. */
   function showQuestion(i) {
