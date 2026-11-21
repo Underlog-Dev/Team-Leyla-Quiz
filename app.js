@@ -8,7 +8,7 @@
   var storage; try { storage = window.localStorage; storage.setItem('tlqh:t', '1'); storage.removeItem('tlqh:t'); } catch (e) { storage = Core.memoryStorage(); }
   var store = Core.makeStore(storage, 'tlqh:guest:');
 
-  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulties: [], count: 20, custom: '', themes: [], subs: {}, timer: 0 };
+  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulties: [], scaled: true, count: 20, custom: '', themes: [], subs: {}, timer: 0 };
   var DEFAULT_SETTINGS = { calm: false, editBeforeCopy: false };
 
   var App = window.App = {
@@ -215,7 +215,8 @@
     app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' +
       '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }], s.mode) +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
-      '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label><div class="seg" role="group">' + [{ v: 'easy', l: 'Easy 1pt' }, { v: 'medium', l: 'Medium 2pts' }, { v: 'hard', l: 'Hard 3pts' }].map(function (o) { return '<button class="chip ' + o.v + '" data-act="diff" data-v="' + o.v + '" aria-pressed="' + (s.difficulties.indexOf(o.v) !== -1) + '">' + o.l + '</button>'; }).join('') + '<button class="chip mixed" data-act="diff-all" aria-pressed="' + (!s.difficulties.length) + '">All</button></div>' +
+      '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label><div class="seg" role="group">' + (s.scaled !== false ? [{ v: 'easy', l: 'Easy 1pt' }, { v: 'medium', l: 'Medium 2pts' }, { v: 'hard', l: 'Hard 3pts' }] : [{ v: 'easy', l: 'Easy' }, { v: 'medium', l: 'Medium' }, { v: 'hard', l: 'Hard' }]).map(function (o) { return '<button class="chip ' + o.v + '" data-act="diff" data-v="' + o.v + '" aria-pressed="' + (s.difficulties.indexOf(o.v) !== -1) + '">' + o.l + '</button>'; }).join('') + '<button class="chip mixed" data-act="diff-all" aria-pressed="' + (!s.difficulties.length) + '">All</button></div>' +
+      '<label class="lbl">Harder questions worth more points</label><div class="seg" role="group"><button class="chip" data-act="scaled" data-v="1" aria-pressed="' + (s.scaled !== false) + '">On (1 / 2 / 3)</button><button class="chip" data-act="scaled" data-v="0" aria-pressed="' + (s.scaled === false) + '">Off (1 each)</button></div>' +
       '<label class="lbl">Number of questions</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
       (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
@@ -293,6 +294,7 @@
     if (a.length === 3) a.length = 0; /* all three = All */
     App.save(); App.render();
   };
+  App.actions.scaled = function (el) { App.setup.scaled = el.dataset.v === '1'; App.save(); App.render(); };
   App.actions['diff-all'] = function () { App.setup.difficulties = []; App.save(); App.render(); };
   App.actions.theme = function (el) {
     var v = el.dataset.v, i = App.setup.themes.indexOf(v);
