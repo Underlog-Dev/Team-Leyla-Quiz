@@ -28,22 +28,24 @@
   function setTimer() { var g = App.game; g.timerEnd = g.timer ? Date.now() + g.timer * 1000 : 0; }
 
   /* ---------- play screen ---------- */
+  App.lbOpen = false;
   App.renderPlay = function (app) {
     var g = App.game, cur = g.cur, Q = q(), th = THEMES[Q.theme] || THEMES.general;
     clearInterval(tick);
-    App.setBackdrop(Q.theme);
+    App.setBackdrop(Q.theme, g.index);
+    var nq = BY_ID[g.ids[g.index + 1]]; if (nq) App.preload(nq.theme, g.index + 1);
     var isHost = g.mode === 'host', pts = points(), last = g.index === g.total - 1;
     if (g.format === 'mc' && !cur.options) cur.options = Core.mcOptions(Q);
     var head = '<div class="qhead"><span class="pill">' + (last ? 'Final question' : 'Question ' + (g.index + 1)) + ' of ' + g.total + '</span>' +
-      '<span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>';
+      '<span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' \u00B7 ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>';
     var body = isHost ? hostBody(Q, cur, last) : soloBody(Q, cur, last);
-    var main = '<section class="qwrap">' + head + '<div class="qcard" id="qcard">' +
+    var main = '<section class="zone"><div class="qwrap">' + head + '<div class="qcard" id="qcard">' +
       (g.timer && !cur.answered ? '<div class="timer" id="timer"></div>' : '') +
       '<div class="qtext" id="qtext">' + esc(Q.question) + '</div>' + body + '</div>' +
-      '<div class="row"><button class="btn small" data-act="flag">🚩 Report wrong</button><span class="grow"></span>' +
-      '<button class="btn small" data-act="quit">Quit quiz</button></div></section>';
-    var tb = App.topbar((isHost ? '<button class="icon-btn lb-sheet-toggle" data-act="toggle-lb" aria-label="Leaderboard">🏆</button><button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">⛶</button>' : ''));
-    app.innerHTML = tb + '<div class="layout play' + (isHost ? ' host' : '') + '">' + main + (isHost ? '<aside class="card lb-panel" id="lb">' + leaderboard() + '</aside>' : '') + '</div>';
+      '<div class="minor"><button class="btn small" data-act="flag">\uD83D\uDEA9 Report wrong</button><button class="btn small" data-act="quit">Quit quiz</button></div></div></section>';
+    var extra = '<button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">\u26F6</button>';
+    var drawer = isHost ? '<aside class="drawer' + (App.lbOpen ? ' open' : '') + '" id="lb" aria-label="Leaderboard"><button class="drawer-tab" data-act="toggle-lb" aria-label="Show or hide leaderboard"><span>\u25C0</span></button><div class="drawer-in">' + leaderboard() + '</div></aside>' : '';
+    app.innerHTML = '<div class="v-play">' + App.hud(extra) + main + drawer + '</div>';
     if (g.timer && !cur.answered) startTick();
   };
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -187,7 +189,7 @@
   };
   App.actions.quit = function () {
     if (!window.confirm('Quit this quiz? Your progress will be discarded (played questions stay marked as played).')) return;
-    clearInterval(tick); App.game = null; App.view = 'setup'; App.save(); App.render();
+    clearInterval(tick); App.game = null; App.lbOpen = false; App.view = 'home'; App.save(); App.render();
   };
 
   /* ---------- host: scoring & leaderboard ---------- */
@@ -217,7 +219,7 @@
   };
   App.actions.remove = function (el) { if (window.confirm('Remove this player?')) { Core.removePlayer(App.game.host, el.dataset.id); App.save(); App.render(); } };
   App.actions['copy-lb'] = function () { App.copy(Core.leaderboardCopy(App.game.host.players, App.templates), 'leaderboard'); };
-  App.actions['toggle-lb'] = function () { var el = document.getElementById('lb'); if (el) el.classList.toggle('open'); };
+  App.actions['toggle-lb'] = function () { var el = document.getElementById('lb'); if (!el) return; App.lbOpen = !el.classList.contains('open'); el.classList.toggle('open', App.lbOpen); };
   App.actions.fullscreen = function () {
     document.body.classList.toggle('fullscreen-host');
     var d = document, de = d.documentElement;
@@ -235,25 +237,27 @@
     }
   }
   App.renderResults = function (app) {
-    var g = App.game; clearInterval(tick); App.setBackdrop('general');
+    var g = App.game; clearInterval(tick);
+    App.setBackdrop((BY_ID[g.ids[g.total - 1]] || {}).theme || 'general', g.total - 1);
+    App.recordGame(g);
     var body;
     if (g.mode === 'host') {
-      var ranked = Core.rankPlayers(g.host.players);
-      body = '<h2>🏆 Final results</h2>' + (ranked.length ? ranked.map(function (p) {
-        return '<div class="lb-item"><span class="lb-rank">' + p.rank + '</span><span class="lb-name">' + esc(p.name) + '</span><span class="lb-score">' + p.score + ' pts</span></div>';
+      var ranked = Core.rankPlayers(g.host.players), medal = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
+      body = '<h2>\uD83C\uDFC6 Final leaderboard</h2>' + (ranked.length ? ranked.slice(0, 10).map(function (p) {
+        return '<div class="lb-item"><span class="lb-rank">' + (medal[p.rank] || p.rank) + '</span><span class="lb-name">' + esc(p.name) + '</span><span class="lb-score">' + p.score + ' pts</span></div>';
       }).join('') : '<p>No points were awarded.</p>') +
-        '<div class="row" style="margin-top:12px"><button class="btn primary" data-act="copy-winner">📋 Copy winner announcement</button><button class="btn" data-act="copy-lb">📋 Copy top three</button></div>';
+        '<div class="row" style="margin-top:.8em;justify-content:center"><button class="btn primary" data-act="copy-lb">\uD83D\uDCCB Copy top three</button><button class="btn yellow" data-act="copy-winner">\uD83D\uDCCB Copy winner</button></div>';
     } else {
       var max = g.solo.log.reduce(function (a, l) { return a + Core.BASE_POINTS[BY_ID[l.id].difficulty]; }, 0);
-      body = '<h2>🎉 Quiz complete!</h2><div class="qtext">' + g.solo.score + ' point' + (g.solo.score === 1 ? '' : 's') + '</div><p>' + g.solo.correct + ' of ' + g.total + ' correct · best possible ' + max + ' pts</p>' +
-        g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '✅' : '❌') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('');
+      body = '<h2>\uD83C\uDF89 Quiz complete!</h2><div class="big-score">' + g.solo.score + ' pt' + (g.solo.score === 1 ? '' : 's') + '</div><p>' + g.solo.correct + ' of ' + g.total + ' correct \u00B7 best possible ' + max + '</p>' +
+        '<div style="max-height:30vh;overflow:auto;text-align:left">' + g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '\u2705' : '\u274C') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('') + '</div>';
     }
-    app.innerHTML = App.topbar() + '<div class="layout"><section class="card" style="text-align:center">' + window.CHICK_SVG.replace('chick-svg', 'chick-svg" style="width:90px;height:90px') + body +
-      '<div class="row" style="margin-top:14px;justify-content:center"><button class="btn yellow" data-act="again">Play again with same settings</button><button class="btn" data-act="home">New setup</button></div></section></div>';
+    app.innerHTML = '<div class="v-results">' + App.hud() + '<div class="pop-back"><div class="pop">' + window.CHICK_SVG.replace('class="chick-svg"', 'class="chick-svg" style="width:70px;height:70px"') + body +
+      '<div class="row" style="margin-top:.8em;justify-content:center"><button class="btn" data-act="again">Play again</button><button class="btn" data-act="home">New setup</button><button class="btn" data-act="go-leader">\uD83C\uDFC6 Leaderboards</button></div></div></div></div>';
     confetti();
   };
   App.actions['copy-winner'] = function () { App.copy(Core.winnerCopy(App.game.host.players, App.templates), 'winner'); };
-  function startFresh() { App.game = null; App.view = 'setup'; App.save(); }
+  function startFresh() { App.game = null; App.lbOpen = false; App.view = 'setup'; App.save(); }
   App.actions.home = function () { startFresh(); App.render(); };
   App.actions.again = function () { var s = App.game ? App.game.setup : App.setup; App.setup = Object.assign({}, App.setup, s); startFresh(); App.actions.start(); };
 })();

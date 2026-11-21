@@ -75,22 +75,30 @@
   App.closeModal = function () { document.getElementById('modal-root').innerHTML = ''; };
   App.actions['close-modal'] = App.closeModal;
 
-  /* ---------- themed backdrop ---------- */
-  var bgOn = 'bgA', lastTheme = null;
-  App.setBackdrop = function (key) {
-    var th = THEMES[key] || THEMES.general;
-    document.body.setAttribute('data-theme', key);
-    if (lastTheme === key) return; lastTheme = key;
+  /* ---------- themed backdrop (your illustrated images) ---------- */
+  var IMGDIR = '';
+  var IMG = {
+    home: ['bg-home.jpg'], setup: ['bg-setup.jpg'], leader: ['bg-leader.jpg'],
+    general: ['bg-general.jpg'], football: ['bg-football.jpg'], sports: ['bg-sports.jpg'], geography: ['bg-geography.jpg'],
+    nature: ['bg-nature.jpg'], science: ['bg-science.jpg'], history: ['bg-history.jpg'], movies: ['bg-movies.jpg'],
+    tv: ['bg-tv.jpg', 'bg-tv2.jpg'], music: ['bg-music.jpg'], celebrities: ['bg-celebrities.jpg'], gaming: ['bg-gaming.jpg'],
+    food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg']
+  };
+  var BANNER = { home: 1, setup: 1, leader: 1 };
+  var bgOn = 'bgA', lastKey = null, preloaded = {};
+  function imgUrl(key, variant) { var l = IMG[key] || IMG.general; return IMGDIR + l[(variant || 0) % l.length]; }
+  App.preload = function (key, variant) {
+    var u = imgUrl(key, variant); if (preloaded[u]) return; preloaded[u] = 1; var i = new Image(); i.src = u;
+  };
+  App.setBackdrop = function (key, variant) {
+    var th = THEMES[key] || THEMES.general, url = imgUrl(key, variant), sig = url;
+    document.body.classList.toggle('pg-banner', !!BANNER[key]); document.body.setAttribute('data-theme', key);
+    if (lastKey === sig) return; lastKey = sig;
     var next = bgOn === 'bgA' ? 'bgB' : 'bgA';
     var el = document.getElementById(next), old = document.getElementById(bgOn);
-    el.style.setProperty('--c1', th.c1); el.style.setProperty('--c2', th.c2);
-    el.className = 'bg-layer' + (th.dark ? ' dark' : '');
-    var html = th.pitch ? '<div class="pitch"></div>' : '';
-    for (var i = 0; i < 22; i++) {
-      var e = th.decor[i % th.decor.length];
-      html += '<span class="d" style="left:' + ((i * 37 + 7) % 94) + '%;top:' + ((i * 53 + 11) % 90) + '%;font-size:' + (26 + (i * 7) % 26) + 'px;animation-delay:-' + (i % 9) + 's">' + e + '</span>';
-    }
-    el.innerHTML = html;
+    el.style.backgroundImage = 'url(' + url + '), linear-gradient(160deg,' + th.c1 + ',' + th.c2 + ')';
+    document.getElementById('bgblur').style.backgroundImage = 'url(' + url + ')';
+    App.preload(key, variant);
     void el.offsetWidth; el.classList.add('on'); old.classList.remove('on'); bgOn = next;
   };
 
@@ -110,22 +118,36 @@
   };
 
   /* ---------- shell ---------- */
-  function topbar(extra) {
-    return '<div class="topbar"><div class="brand">' + window.CHICK_SVG + '<div>Team Leyla<small>The Quiz Hub</small></div></div><div class="spacer"></div>' + (extra || '') +
+  App.hud = function (extra) {
+    var h = App.view !== 'home' ? '<button class="icon-btn" data-act="go-home" aria-label="Home">🏠</button>' : '';
+    return '<div class="hud">' + (extra || '') + h +
       '<button class="icon-btn" data-act="open-stats" aria-label="Question bank statistics">📊</button>' +
       '<button class="icon-btn" data-act="open-settings" aria-label="Settings">⚙️</button></div>';
-  }
-  App.topbar = topbar;
+  };
+  App.topbar = App.hud;
 
   App.render = function () {
     var app = document.getElementById('app');
     document.body.classList.toggle('calm', !!App.settings.calm);
-    if (App.view === 'play' && App.game) { App.renderPlay(app); }
-    else if (App.view === 'results' && App.game) { App.renderResults(app); }
-    else { App.view = 'setup'; App.setBackdrop('general'); renderSetup(app); }
+    var v = App.view;
+    if ((v === 'play' || v === 'results') && !App.game) v = App.view = 'home';
+    if (v === 'play') App.renderPlay(app);
+    else if (v === 'results') App.renderResults(app);
+    else if (v === 'setup') { App.setBackdrop('setup'); renderSetup(app); }
+    else if (v === 'leader') { App.setBackdrop('leader'); renderLeader(app); }
+    else { App.view = 'home'; App.setBackdrop('home'); renderHome(app); }
   };
 
-  /* ---------- setup screen ---------- */
+  /* ---------- home ---------- */
+  function renderHome(app) {
+    var resume = App.game ? '<button class="btn yellow" data-act="resume">▶ Resume quiz</button>' : '';
+    app.innerHTML = '<div class="v-home">' + App.hud() + '<div class="zone">' +
+      '<button class="btn yellow play-btn" data-act="go-setup">▶ Play</button>' +
+      '<div class="home-links">' + resume + '<button class="btn" data-act="go-leader">🏆 Leaderboard</button></div>' +
+      '</div></div>';
+  }
+
+  /* ---------- game selection ---------- */
   function seg(name, opts, cur) {
     return '<div class="seg" role="group">' + opts.map(function (o) {
       return '<button class="chip ' + (o.cls || '') + '" data-act="set" data-k="' + name + '" data-v="' + o.v + '" aria-pressed="' + (String(cur) === String(o.v)) + '">' + o.l + '</button>';
@@ -145,27 +167,67 @@
       }).join('') + '</div>';
     }).join('');
     var countOpts = [10, 20, 30, 50, 100].map(function (n) { return { v: n, l: n }; }).concat([{ v: 'custom', l: 'Custom' }]);
-    var warn = '';
-    if (avail === 0) warn = '<div class="notice warn">No unused questions left for these settings. Pick more themes, or reset your played history in 📊.</div>';
-    else if (avail < want) warn = '<div class="notice">Only <b>' + avail + '</b> unused questions match - the quiz will have ' + avail + ' questions.</div>';
-    var modeDesc = s.mode === 'solo' ? 'Answer the questions yourself and earn points.' : 'You host: copy questions into chat, then award points to whoever answers correctly.';
-    app.innerHTML = topbar() + '<div class="layout setup">' +
-      '<section class="card setup-panel" aria-label="Game setup"><h2>Build your quiz</h2>' +
-      '<label class="h">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Multiplayer / Host' }], s.mode) + '<p class="help">' + modeDesc + '</p>' +
-      '<label class="h">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
-      '<label class="h">Difficulty</label>' + seg('difficulty', [{ v: 'easy', l: 'Easy · 1pt', cls: 'easy' }, { v: 'medium', l: 'Medium · 2pts', cls: 'medium' }, { v: 'hard', l: 'Hard · 3pts', cls: 'hard' }, { v: 'mixed', l: 'Mixed', cls: 'mixed' }], s.difficulty) +
-      '<label class="h">Themes <span class="help">(pick several, or none for all)</span></label><div class="seg">' + themeChips + '</div>' +
-      (subHtml ? '<details style="margin-top:8px"><summary class="help">Narrow by subcategory (optional)</summary>' + subHtml + '</details>' : '') +
-      '<label class="h">Number of questions</label>' + seg('count', countOpts, s.count) +
-      (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:8px">' : '') +
-      (s.mode === 'solo' ? '<label class="h">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
-      '<div style="margin-top:14px">' + warn + '</div>' +
-      '<button class="btn primary big" style="margin-top:12px" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button></section>' +
-      '<section class="card welcome">' + window.CHICK_SVG + '<h1>Welcome to Team Leyla!</h1><p>Quizzes for TikTok Live hosts and solo players.</p>' +
-      '<ul><li>🎯 <b>Easy</b> 1 point, <b>Medium</b> 2, <b>Hard</b> 3</li><li>💡 A hint costs 1 point (never below 1)</li><li>🔒 No repeated questions - your history is tracked on this device</li><li>📋 One-tap copy buttons for TikTok text-to-speech</li></ul>' +
-      '<p class="help">' + BANK.length + ' starter questions · ' + (BANK.length - App.used.length) + ' unplayed</p>' +
-      (App.game ? '<button class="btn yellow" data-act="resume">▶ Resume your quiz</button>' : '') + '</section></div>';
+    var msg = '';
+    if (avail === 0) msg = '<span class="notice warn">No unused questions left for these settings.</span>';
+    else if (avail < want) msg = '<span class="notice">Only ' + avail + ' unused questions match.</span>';
+    else msg = '<span class="help">' + avail + ' questions available</span>';
+    app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' +
+      '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }], s.mode) +
+      '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
+      '<label class="lbl">Difficulty</label>' + seg('difficulty', [{ v: 'easy', l: 'Easy 1pt', cls: 'easy' }, { v: 'medium', l: 'Medium 2pts', cls: 'medium' }, { v: 'hard', l: 'Hard 3pts', cls: 'hard' }, { v: 'mixed', l: 'Mixed', cls: 'mixed' }], s.difficulty) +
+      '<label class="lbl">Number of questions</label>' + seg('count', countOpts, s.count) +
+      (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
+      (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
+      '</div><div class="col"><label class="lbl">Themes <span class="help">(pick several, or none for all)</span></label><div class="seg">' + themeChips + '</div>' +
+      (subHtml ? '<details style="margin-top:.5em"><summary class="help">Narrow by subcategory (optional)</summary>' + subHtml + '</details>' : '') + '</div></div>' +
+      '<div class="setup-actions">' + msg + '<button class="btn primary" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button></div></section></div></div>';
   }
+
+  /* ---------- leaderboard page ---------- */
+  App.hist = store.get('hist', []); App.alltime = store.get('alltime', {}); App.lbTab = 'recent';
+  App.recordGame = function (g) {
+    if (g.recorded) return; g.recorded = true;
+    var entry = { t: Date.now(), mode: g.mode, total: g.total, themes: (g.setup.themes.length ? g.setup.themes : ORDER).map(function (k) { return THEMES[k].label; }) };
+    if (g.mode === 'host') {
+      entry.players = Core.rankPlayers(g.host.players).map(function (p) { return { name: p.name, score: p.score, rank: p.rank }; });
+      entry.players.forEach(function (p) {
+        var k = Core.normalizeText(p.name), a = App.alltime[k] = App.alltime[k] || { name: p.name, points: 0, games: 0, wins: 0 };
+        a.points += p.score; a.games++; if (p.rank === 1 && p.score > 0) a.wins++;
+      });
+    } else entry.solo = { score: g.solo.score, correct: g.solo.correct };
+    App.hist.unshift(entry); App.hist = App.hist.slice(0, 30);
+    store.set('hist', App.hist); store.set('alltime', App.alltime);
+  };
+  function renderLeader(app) {
+    var body;
+    if (App.lbTab === 'alltime') {
+      var list = Object.keys(App.alltime).map(function (k) { var a = App.alltime[k]; return { id: k, name: a.name, score: a.points, games: a.games, wins: a.wins }; });
+      var ranked = Core.rankPlayers(list), by = {}; list.forEach(function (x) { by[x.id] = x; });
+      body = ranked.length ? '<div class="lb-scroll">' + ranked.slice(0, 50).map(function (p) {
+        return '<div class="lb-item"><span class="lb-rank">' + p.rank + '</span><span class="lb-name">' + esc(p.name) + '</span><span class="help" style="margin:0">' + by[p.id].games + ' games · ' + by[p.id].wins + ' wins</span><span class="lb-score">' + p.score + '</span></div>';
+      }).join('') + '</div><div class="row" style="margin-top:.5em"><button class="btn small primary" data-act="copy-alltime">📋 Copy all-time top three</button><button class="btn small danger" data-act="clear-lb">Clear</button></div>'
+        : '<p class="help">No host games finished yet. Players you award points to appear here after a quiz ends.</p>';
+    } else {
+      body = App.hist.length ? '<div class="lb-scroll">' + App.hist.map(function (h) {
+        var d = new Date(h.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        var inner = h.players ? (h.players.slice(0, 3).map(function (p) { return p.rank + '. ' + esc(p.name) + ' (' + p.score + ')'; }).join(' · ') || 'No points awarded') : 'Solo: ' + h.solo.score + ' pts, ' + h.solo.correct + '/' + h.total + ' correct';
+        return '<div class="lb-item" style="display:block"><b>' + d + ' · ' + (h.mode === 'host' ? 'Host' : 'Solo') + ' · ' + h.total + ' questions</b><div class="help">' + inner + '</div></div>';
+      }).join('') + '</div>' : '<p class="help">No finished quizzes yet - play one and it appears here.</p>';
+    }
+    app.innerHTML = '<div class="v-leader">' + App.hud() + '<div class="zone"><section class="glass"><div class="tabs">' +
+      '<button class="chip" data-act="lbtab" data-v="recent" aria-pressed="' + (App.lbTab === 'recent') + '">Recent games</button>' +
+      '<button class="chip" data-act="lbtab" data-v="alltime" aria-pressed="' + (App.lbTab === 'alltime') + '">All-time (this device)</button></div>' + body +
+      '</section></div></div>';
+  }
+  App.actions.lbtab = function (el) { App.lbTab = el.dataset.v; App.render(); };
+  App.actions['copy-alltime'] = function () {
+    var list = Object.keys(App.alltime).map(function (k) { return { id: k, name: App.alltime[k].name, score: App.alltime[k].points }; });
+    App.copy(Core.leaderboardCopy(list, App.templates), 'leaderboard');
+  };
+  App.actions['clear-lb'] = function () { if (window.confirm('Clear saved leaderboards on this device?')) { App.hist = []; App.alltime = {}; store.set('hist', []); store.set('alltime', {}); App.render(); } };
+  App.actions['go-home'] = function () { App.view = 'home'; App.render(); window.scrollTo(0, 0); };
+  App.actions['go-setup'] = function () { App.view = 'setup'; App.render(); window.scrollTo(0, 0); };
+  App.actions['go-leader'] = function () { App.view = 'leader'; App.render(); window.scrollTo(0, 0); };
 
   App.actions.set = function (el) {
     var k = el.dataset.k, v = el.dataset.v;
@@ -240,9 +302,8 @@
   });
 
   document.addEventListener('DOMContentLoaded', function () {
-    if (App.game && !App.game.finished && BY_ID[App.game.ids[App.game.index]]) App.view = 'play';
-    else if (App.game && App.game.finished) App.view = 'results';
-    else App.game = null;
+    if (App.game && !BY_ID[App.game.ids[App.game.index]]) App.game = null;
+    App.view = 'home';
     App.render();
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
   });
