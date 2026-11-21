@@ -185,7 +185,7 @@
     if (!g.cur.answered && g.mode === 'solo') { /* cannot skip without answering */ App.toast('Answer or give up first'); return; }
     App.markUsed(q().id);
     if (g.index >= g.total - 1) { g.finished = true; App.view = 'results'; App.save(); App.render(); return; }
-    g.index++; g.cur = fresh(); setTimer(); App.save(); App.render(); window.scrollTo(0, 0);
+    g.index++; g.cur = fresh(); setTimer(); App.save(); App.resetScroll = true; App.render(); window.scrollTo(0, 0);
   };
   App.actions.quit = function () {
     if (!window.confirm('Quit this quiz? Your progress will be discarded (played questions stay marked as played).')) return;
