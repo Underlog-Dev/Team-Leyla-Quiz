@@ -124,7 +124,7 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
 @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.8}}
 
 /* ---------- layout: wide (desktop / landscape tablets). Content is positioned on the 16:9 art. ---------- */
-@media (min-width:900px) and (min-height:540px){
+@media (min-width:900px) and (min-height:540px) and (orientation:landscape){
   #bgblur{filter:blur(26px) brightness(.8)}
   body.pg-banner #bgblur{background:linear-gradient(#2b1065,#12062f)}
   #bg .bg-layer,body.pg-banner .bg-layer{inset:auto;left:50%;top:50%;width:min(100vw,calc(100vh * 16 / 9));height:min(100vh,calc(100vw * 9 / 16));transform:translate(-50%,-50%);background-size:100% 100%}
@@ -147,4 +147,24 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
   .drawer-tab{top:5em;bottom:auto}
   .lb-scroll{overflow:auto}
   .pop{font-size:max(14px,1.2cqw)}
+}
+
+/* ---------- layout: portrait (phones / tablets held upright). Uses your portrait art; content sits in its blank centre. ---------- */
+@media (orientation:portrait){
+  #bgblur{background:#12062f!important;filter:none;transform:none}
+  #bg .bg-layer,body.pg-banner .bg-layer{inset:0;height:auto;background-size:cover;background-position:center}
+  #stage{position:fixed;inset:0;min-height:0;overflow:hidden}
+  #app,body.pg-banner #app,body:not(.pg-banner) #app{position:absolute;inset:0;max-width:none;margin:0;padding:0;font-size:clamp(13px,3.7vw,19px)}
+  .zone{position:absolute;overflow:auto;-webkit-overflow-scrolling:touch}
+  .v-home .zone{left:12%;right:12%;top:50%;bottom:auto;transform:translateY(-50%);display:flex;flex-direction:column;justify-content:center;overflow:visible}
+  .v-home .play-btn{font-size:1.4em;margin:.3em auto}
+  /* zones follow the art's blank box exactly: --ax/--ay/--aw/--ah = where the cover-fitted image sits (set in app.js) */
+  .v-setup .zone{left:calc(var(--ax,0px) + var(--aw,100vw)*.175);top:calc(var(--ay,0px) + var(--ah,100vh)*.222);width:calc(var(--aw,100vw)*.645);height:calc(var(--ah,100vh)*.6);right:auto;bottom:auto;overscroll-behavior:contain}
+  .v-leader .zone{left:calc(var(--ax,0px) + var(--aw,100vw)*.09);top:calc(var(--ay,0px) + var(--ah,100vh)*.222);width:calc(var(--aw,100vw)*.82);height:calc(var(--ah,100vh)*.6);right:auto;bottom:auto;overscroll-behavior:contain}
+  .v-play .zone,.v-results .zone{left:6%;right:6%;top:9%;bottom:24%;display:flex;flex-direction:column;justify-content:center}
+  .v-setup .glass,.v-leader .glass{background:none;border:none;box-shadow:none;padding:.2em .3em}
+  .qcard{max-height:100%;overflow:auto}
+}
+@media (orientation:portrait){
+  .v-setup .setup-actions{position:sticky;bottom:0;background:linear-gradient(transparent,#2a0d66 35%);border-radius:0 0 1em 1em;padding:.8em .2em .3em;margin-top:.4em;z-index:2}
 }
