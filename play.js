@@ -81,13 +81,13 @@
     else ans = answerBlock(Q) + '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn primary" data-act="copy-a">📋 Copy answer</button></div>';
     var award = '<div class="row" style="margin-top:12px"><input type="text" id="award-name" placeholder="Winner\u2019s name (+' + points() + ' when you press Next)" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"></div>' + awardedChips();
     var nextLabel = last ? 'Finish quiz 🏁' : 'Next question →';
-    return opts + hintBlock(Q, cur) + tools + ans + award + '<button class="btn primary big" style="margin-top:12px" data-act="next">' + nextLabel + '</button>';
+    return opts + hintBlock(Q, cur) + tools + ans + award + '<div class="row" style="margin-top:12px;flex-wrap:nowrap">' + (g.index > 0 ? '<button class="btn big" style="width:auto;flex:0 0 auto" data-act="back">\u2190 Back</button>' : '') + '<button class="btn primary big grow" data-act="next">' + nextLabel + '</button></div>';
   }
   function awardedChips() {
     var g = App.game, ids = g.host.awards[String(g.index)] || [];
     if (!ids.length) return '';
-    var names = ids.map(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; return p ? esc(p.name) : ''; }).filter(Boolean);
-    return '<p class="help">✅ Scored this question: ' + names.join(', ') + '</p>';
+    var chips = ids.map(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; return p ? '<button class="chip" data-act="unaward" data-id="' + id + '" aria-label="Take away points from ' + esc(p.name) + '">' + esc(p.name) + ' \u2715</button>' : ''; }).join('');
+    return '<p class="help">\u2705 Scored this question (tap a name to take it back):</p><div class="seg">' + chips + '</div>';
   }
 
   function soloBody(Q, cur, last) {
@@ -155,7 +155,7 @@
 
   /* ---------- shared actions ---------- */
   App.actions.hint = function () {
-    var c = App.game.cur; if (!c.hint) { c.hint = true; App.save(); }
+    var g = App.game, c = g.cur; if (!c.hint) { c.hint = true; (g.hints = g.hints || {})[g.index] = 1; App.save(); }
     App.render();
   };
   App.actions.reveal = function () {
@@ -209,6 +209,23 @@
     App.markUsed(q().id);
     if (g.index >= g.total - 1) { g.finished = true; App.view = 'results'; App.save(); App.render(); return; }
     g.index++; g.cur = fresh(); setTimer(); App.save(); App.resetScroll = true; App.render(); window.scrollTo(0, 0);
+  };
+  /* Host: go back a question to fix a wrongly typed name. Its scores stay; tap a scored name to take it back. */
+  function showQuestion(i) {
+    var g = App.game; g.index = i; g.cur = fresh(); g.cur.revealed = true; g.cur.hint = !!(g.hints && g.hints[i]);
+    clearInterval(tick); App.resetScroll = true; App.save(); App.render();
+  }
+  App.actions.back = function () {
+    var g = App.game; if (g.mode !== 'host' || g.index < 1) return;
+    showQuestion(g.index - 1);
+  };
+  App.actions.unaward = function (el) {
+    var g = App.game;
+    if (Core.removeAward(g.host, el.dataset.id, g.index)) { App.save(); App.render(); App.toast('Points taken back - type the right name'); }
+  };
+  App.actions['back-last'] = function () {
+    var g = App.game; if (!g || g.mode !== 'host') return;
+    App.unrecordGame(g); g.finished = false; App.view = 'play'; showQuestion(g.total - 1);
   };
   App.actions.quit = function () {
     if (!window.confirm('Quit this quiz? Your progress will be discarded (played questions stay marked as played).')) return;
@@ -276,7 +293,7 @@
         '<div style="max-height:30vh;overflow:auto;text-align:left">' + g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '\u2705' : '\u274C') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('') + '</div>';
     }
     app.innerHTML = '<div class="v-results">' + App.hud() + '<div class="pop-back"><div class="pop">' + window.CHICK_SVG.replace('class="chick-svg"', 'class="chick-svg" style="width:70px;height:70px"') + body +
-      '<div class="row" style="margin-top:.8em;justify-content:center"><button class="btn" data-act="again">Play again</button><button class="btn" data-act="home">New setup</button><button class="btn" data-act="go-leader">\uD83C\uDFC6 Leaderboards</button></div></div></div></div>';
+      '<div class="row" style="margin-top:.8em;justify-content:center">' + (g.mode === 'host' ? '<button class="btn" data-act="back-last">\u21A9 Back to last question</button>' : '') + '<button class="btn" data-act="again">Play again</button><button class="btn" data-act="home">New setup</button><button class="btn" data-act="go-leader">\uD83C\uDFC6 Leaderboards</button></div></div></div></div>';
     confetti();
   };
   App.actions['copy-winner'] = function () { App.copy(Core.winnerCopy(App.game.host.players, App.templates), 'winner'); };
