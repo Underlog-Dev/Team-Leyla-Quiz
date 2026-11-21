@@ -43,7 +43,7 @@
       (g.timer && !cur.answered ? '<div class="timer" id="timer"></div>' : '') +
       '<div class="qtext" id="qtext">' + esc(Q.question) + '</div>' + body + '</div>' +
       '<div class="minor"><button class="btn small" data-act="flag">\uD83D\uDEA9 Report wrong</button><button class="btn small" data-act="quit">Quit quiz</button></div></div></section>';
-    var extra = '<button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">\u26F6</button>';
+    var extra = '<button class="icon-btn quit-btn" data-act="quit" aria-label="Quit quiz">\u2715 Quit</button><button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">\u26F6</button>';
     var drawer = isHost ? '<aside class="drawer' + (App.lbOpen ? ' open' : '') + '" id="lb" aria-label="Leaderboard"><button class="drawer-tab" data-act="toggle-lb" aria-label="Show or hide leaderboard"><b>\uD83C\uDFC6</b><small>Leaders</small><span>\u25C0</span></button><div class="drawer-in">' + leaderboard() + '</div></aside>' : '';
     app.innerHTML = '<div class="v-play">' + App.hud(extra) + main + drawer + '</div>';
     if (g.timer && !cur.answered) startTick();
@@ -59,6 +59,10 @@
     return '<div class="answerbox revealed"><div class="help">Answer</div><div class="ans">' + esc(Q.answer) + '</div>' + (Q.explanation ? '<div class="help">' + esc(Q.explanation) + '</div>' : '') + '</div>';
   }
 
+  function easierBtn(Q, cur) {
+    if (cur.answered || (Q.difficulty !== 'hard' && Q.difficulty !== 'medium')) return '';
+    return '<button class="btn" data-act="easier">\u2B07 Easier question</button>';
+  }
   function hostBody(Q, cur, last) {
     var g = App.game;
     var opts = '';
@@ -69,7 +73,7 @@
       }).join('') + '</div><button class="btn small" style="margin-top:8px" data-act="copy-options">Copy options</button>';
     }
     var tools = '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn" data-act="copy-q">📋 Copy question</button>' +
-      '<button class="btn" data-act="refresh">🔄 Refresh</button>' +
+      '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) +
       '<button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button>' +
       (cur.hint ? '<button class="btn" data-act="copy-hint">📋 Copy hint</button>' : '') + '</div>';
     var ans;
@@ -96,7 +100,7 @@
         html += '<div class="row" style="margin-top:10px"><input type="text" id="guess" class="grow" placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(cur.guess) + '" data-input="guess" data-enter="submit"><button class="btn primary" data-act="submit">Submit</button></div>';
         if (cur.close) html += '<div class="notice" style="margin-top:8px">So close! Does your answer match? <div class="row" style="margin-top:6px"><button class="btn small" data-act="accept-close">Yes, count it</button><button class="btn small" data-act="reject-close">No</button></div></div>';
       }
-      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button><button class="btn" data-act="giveup">Give up</button></div>';
+      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
     } else {
       if (g.format === 'mc') {
         html = hintBlock(Q, cur) + '<div class="mc">' + cur.options.map(function (o, i) {
@@ -174,6 +178,17 @@
     g.rejected = rej; g.ids[g.index] = rep.id; g.cur = fresh(); setTimer();
     App.save(); App.render();
     var card = document.getElementById('qcard'); if (card) card.classList.add('refreshing');
+  };
+  /* "Easier question": swap for a question one difficulty level lower (hard -> medium -> easy). */
+  App.actions.easier = function () {
+    var g = App.game, c = g.cur, Q = q(), lower = { hard: 'medium', medium: 'easy' }[Q.difficulty];
+    if (!lower) { App.toast('Already the easiest level'); return; }
+    if (c.answered || (g.mode === 'host' && (g.host.awards[String(g.index)] || []).length)) { App.toast('This question is already scored'); return; }
+    var rej = g.rejected.concat([Q.id]);
+    var rep = Core.findReplacement(App.poolBank(g.setup), Q, { usedIds: App.used, rejectedIds: rej, quizIds: g.ids, themes: [], difficulty: lower });
+    if (!rep) { App.toast('No ' + lower + ' question left for these themes'); return; }
+    g.rejected = rej; g.ids[g.index] = rep.id; g.cur = fresh(); setTimer();
+    App.save(); App.render(); App.toast('Swapped for ' + (lower === 'easy' ? 'an easy' : 'a medium') + ' question');
   };
   App.actions.flag = function () {
     var Q = q(); if (!window.confirm('Report this question as wrong or unclear? It will be hidden from your future quizzes.')) return;

@@ -173,3 +173,6 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
 .drawer-tab b{font-size:1.3em}.drawer-tab small{font-size:.62em;font-weight:800;letter-spacing:.03em}
 .drawer.open .drawer-tab{animation:none}
 @keyframes tabpulse{0%,100%{box-shadow:-3px 3px 14px rgba(255,90,220,.6),0 0 0 2px rgba(26,8,60,.6)}50%{box-shadow:-3px 3px 24px rgba(255,200,60,.95),0 0 0 2px rgba(26,8,60,.6)}}
+
+.icon-btn.quit-btn{width:auto;padding:0 .9em;font-weight:800;font-size:.85em;background:rgba(214,69,93,.92)}
+.minor .btn[data-act=quit]{background:#ffd9de;color:var(--bad)}
