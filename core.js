@@ -296,7 +296,9 @@
 
   function matchesFilters(q, f) {
     if (f.themes && f.themes.length && f.themes.indexOf(q.theme) === -1) return false;
-    if (f.difficulty && f.difficulty !== 'mixed' && q.difficulty !== f.difficulty) return false;
+    /* several difficulties can be picked (e.g. easy + medium); none picked = all */
+    var ds = Array.isArray(f.difficulties) ? f.difficulties : (f.difficulty && f.difficulty !== 'mixed' ? [f.difficulty] : []);
+    if (ds.length && ds.indexOf(q.difficulty) === -1) return false;
     return true;
   }
 

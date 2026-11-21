@@ -13,10 +13,10 @@
     var s = App.setup, pool = App.poolBank(s);
     var want = s.count === 'custom' ? Math.max(1, parseInt(s.custom, 10) || 0) : s.count;
     if (!want) { App.toast('Enter how many questions'); return; }
-    var res = Core.buildQuiz(pool, { themes: [], difficulty: s.difficulty }, Math.min(want, 500), App.used);
+    var res = Core.buildQuiz(pool, { themes: [], difficulties: s.difficulties }, Math.min(want, 500), App.used);
     if (!res.questions.length) { App.toast('No unused questions left for these settings'); return; }
     App.game = {
-      mode: s.mode, format: s.format, difficulty: s.difficulty, timer: s.mode === 'solo' ? s.timer : 0,
+      mode: s.mode, format: s.format, difficulties: s.difficulties.slice(), timer: s.mode === 'solo' ? s.timer : 0,
       setup: JSON.parse(JSON.stringify(s)),
       ids: res.questions.map(function (x) { return x.id; }), total: res.questions.length, index: 0,
       rejected: [], finished: false, cur: fresh(), solo: { score: 0, correct: 0, log: [] }, host: Core.newHostState(), started: Date.now()
