@@ -63,13 +63,15 @@
   function rankPlayers(players) {
     var sorted = players.slice().sort(function (a, b) {
       if (b.score !== a.score) return b.score - a.score;
+      if ((b.tb || 0) !== (a.tb || 0)) return (b.tb || 0) - (a.tb || 0);
       return String(a.name).localeCompare(String(b.name));
     });
-    var out = [], prevScore = null, prevRank = 0;
+    var out = [], prevScore = null, prevRank = 0, prevTb = 0;
     sorted.forEach(function (p, i) {
-      var rank = (prevScore !== null && p.score === prevScore) ? prevRank : i + 1;
-      prevScore = p.score; prevRank = rank;
-      out.push({ id: p.id, name: p.name, score: p.score, rank: rank });
+      var same = prevScore !== null && p.score === prevScore && (p.tb || 0) === prevTb;
+      var rank = same ? prevRank : i + 1;
+      prevScore = p.score; prevRank = rank; prevTb = p.tb || 0;
+      out.push({ id: p.id, name: p.name, score: p.score, rank: rank, tb: p.tb || 0 });
     });
     return out;
   }
@@ -110,8 +112,33 @@
     var names = winners.map(function (p) { return p.name; });
     var pts = winners[0].score;
     var ptsWord = pts === 1 ? 'point' : 'points';
-    if (names.length === 1) return cleanForTTS(t.winnerIntro + ' ' + names[0] + ' with ' + pts + ' ' + ptsWord + '!');
+    if (names.length === 1) return cleanForTTS(t.winnerIntro + ' ' + names[0] + ' with ' + pts + ' ' + ptsWord + (winners[0].tb ? ', after winning the tiebreaker' : '') + '!');
     return cleanForTTS(t.jointWinnerIntro + '! ' + joinNames(names) + ' share first place with ' + pts + ' ' + ptsWord + ' each!');
+  }
+
+  /* ---------- tiebreakers: closest number wins ---------- */
+  function parseGuess(str) {
+    var t = String(str == null ? '' : str).replace(/[\s,\u00A3$%]/g, '');
+    if (!/^-?\d+(\.\d+)?$/.test(t)) return null;
+    return parseFloat(t);
+  }
+  /* entries: [{id, name, guess}] -> {rows (closest first), winners (ids), tie} */
+  function tiebreakRound(entries, answer) {
+    var rows = entries.map(function (e) {
+      var v = parseGuess(e.guess);
+      return { id: e.id, name: e.name, guess: e.guess, value: v, diff: v === null ? null : Math.abs(v - answer) };
+    });
+    rows.sort(function (a, b) { return (a.diff === null ? Infinity : a.diff) - (b.diff === null ? Infinity : b.diff); });
+    var best = rows.length && rows[0].diff !== null ? rows[0].diff : null;
+    var winners = best === null ? [] : rows.filter(function (r) { return r.diff === best; }).map(function (r) { return r.id; });
+    return { rows: rows, winners: winners, tie: winners.length !== 1, noGuesses: best === null };
+  }
+  function pickTiebreaker(list, usedIds, themes) {
+    var free = list.filter(function (q) { return usedIds.indexOf(q.id) === -1; });
+    if (!free.length) free = list.slice();
+    var pref = themes && themes.length ? free.filter(function (q) { return themes.indexOf(q.theme) !== -1; }) : [];
+    var pool = pref.length ? pref : free;
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   }
 
   /* ---------- host scoring ---------- */
@@ -296,9 +323,7 @@
 
   function matchesFilters(q, f) {
     if (f.themes && f.themes.length && f.themes.indexOf(q.theme) === -1) return false;
-    /* several difficulties can be picked (e.g. easy + medium); none picked = all */
-    var ds = Array.isArray(f.difficulties) ? f.difficulties : (f.difficulty && f.difficulty !== 'mixed' ? [f.difficulty] : []);
-    if (ds.length && ds.indexOf(q.difficulty) === -1) return false;
+    if (f.difficulty && f.difficulty !== 'mixed' && q.difficulty !== f.difficulty) return false;
     return true;
   }
 
@@ -412,7 +437,7 @@
     availablePoints: availablePoints, ordinal: ordinal,
     questionCopy: questionCopy, answerCopy: answerCopy, hintCopy: hintCopy,
     rankPlayers: rankPlayers, leaderboardCopy: leaderboardCopy, winnerCopy: winnerCopy,
-    newHostState: newHostState, awardPoints: awardPoints, adjustPoints: adjustPoints, removeAward: removeAward,
+    newHostState: newHostState, parseGuess: parseGuess, tiebreakRound: tiebreakRound, pickTiebreaker: pickTiebreaker, joinNames: joinNames, cleanForTTS: cleanForTTS, awardPoints: awardPoints, adjustPoints: adjustPoints, removeAward: removeAward,
     undoLast: undoLast, renamePlayer: renamePlayer, removePlayer: removePlayer,
     normalizeText: normalizeText, checkAnswer: checkAnswer,
     similarity: similarity, isNearDuplicate: isNearDuplicate, findDuplicates: findDuplicates,
