@@ -180,3 +180,22 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
 .v-play .zone>.qwrap,.v-results .zone>.qwrap{margin:auto 0}
 .qcard .chip{background:var(--yellow);color:var(--ink);box-shadow:inset 0 0 0 2px var(--yellow-d);justify-content:center}
 .qcard .seg{justify-content:center}
+
+/* settings sheet (tidied) */
+.set-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.set-head h2{margin:0}
+.icon-x{width:38px;height:38px;border-radius:50%;background:var(--purple-l);color:var(--purple-d);font-size:18px;font-weight:700;border:0}
+.set-card{background:#fff;border:1.5px solid var(--purple-l);border-radius:16px;padding:4px 14px;margin-bottom:12px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+.set-row+.set-row{border-top:1px solid var(--purple-l)}
+.set-row span,.set-card summary{display:flex;flex-direction:column}
+.set-row small,.set-card summary small{color:var(--muted);font-size:13px;font-weight:400}
+.set-row input{width:24px;height:24px;flex:none;accent-color:var(--purple-d)}
+.set-card summary{padding:10px 0;cursor:pointer;list-style:none}
+.set-card summary::-webkit-details-marker{display:none}
+.set-card summary b::after{content:' ▾';color:var(--muted)}
+.set-card[open] summary b::after{content:' ▴'}
+.set-lbl{display:block;font-size:13px;color:var(--muted);margin:8px 0}
+.set-lbl textarea{margin-top:4px;font-size:15px;resize:vertical}
+.set-card .btn.small{margin:6px 0 12px}
+.set-save{width:100%}
