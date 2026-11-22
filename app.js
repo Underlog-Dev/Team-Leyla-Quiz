@@ -138,7 +138,22 @@
   };
   App.topbar = App.hud;
 
+  var SCROLLERS = '.zone, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
   App.render = function () {
+    var app = document.getElementById('app');
+    /* keep scroll positions when a click only refreshes the same screen */
+    var keep = null;
+    if (!App.resetScroll && App._lastView === App.view) {
+      keep = { y: window.pageYOffset, els: [].map.call(app.querySelectorAll(SCROLLERS), function (e) { return e.scrollTop; }) };
+    }
+    App.resetScroll = false; App._lastView = App.view;
+    App._render();
+    if (keep) {
+      [].forEach.call(app.querySelectorAll(SCROLLERS), function (e, i) { if (keep.els[i]) e.scrollTop = keep.els[i]; });
+      if (keep.y) window.scrollTo(0, keep.y);
+    }
+  };
+  App._render = function () {
     var app = document.getElementById('app');
     document.body.classList.toggle('calm', !!App.settings.calm);
     var v = App.view;
