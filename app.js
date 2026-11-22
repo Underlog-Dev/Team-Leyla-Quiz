@@ -8,7 +8,7 @@
   var storage; try { storage = window.localStorage; storage.setItem('tlqh:t', '1'); storage.removeItem('tlqh:t'); } catch (e) { storage = Core.memoryStorage(); }
   var store = Core.makeStore(storage, 'tlqh:guest:');
 
-  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulties: [], scaled: true, count: 20, custom: '', themes: [], subs: {}, timer: 0 };
+  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulty: 'mixed', count: 20, custom: '', themes: [], subs: {}, timer: 0 };
   var DEFAULT_SETTINGS = { calm: false, editBeforeCopy: false };
 
   var App = window.App = {
@@ -22,10 +22,6 @@
     game: store.get('game', null),
     actions: {}, inputs: {}
   };
-  /* older saves kept one difficulty; turn it into the new list (Mixed = all) */
-  var savedSetup = store.get('setup', {});
-  if (!Array.isArray(savedSetup.difficulties)) { var od = savedSetup.difficulty; App.setup.difficulties = od && od !== 'mixed' ? [od] : []; }
-  delete App.setup.difficulty;
 
   /* ---------- utils ---------- */
   var esc = App.esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -174,6 +170,7 @@
     if ((v === 'play' || v === 'results') && !App.game) v = App.view = 'home';
     if (v === 'play') App.renderPlay(app);
     else if (v === 'results') App.renderResults(app);
+    else if (v === 'tiebreak') App.renderTiebreak(app);
     else if (v === 'setup') { App.setBackdrop('setup'); renderSetup(app); }
     else if (v === 'leader') { App.setBackdrop('leader'); renderLeader(app); }
     else { App.view = 'home'; App.setBackdrop('home'); renderHome(app); }
@@ -196,7 +193,7 @@
   }
   function renderSetup(app) {
     var s = App.setup, pool = App.poolBank(s);
-    var avail = Core.availableQuestions(pool, { themes: [], difficulties: s.difficulties }, App.used).length;
+    var avail = Core.availableQuestions(pool, { themes: [], difficulty: s.difficulty }, App.used).length;
     var want = s.count === 'custom' ? Math.max(1, parseInt(s.custom, 10) || 0) : s.count;
     var themeChips = ORDER.map(function (k) {
       return '<button class="chip" data-act="theme" data-v="' + k + '" aria-pressed="' + (s.themes.indexOf(k) !== -1) + '">' + THEMES[k].icon + ' ' + THEMES[k].label + '</button>';
@@ -215,8 +212,7 @@
     app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' +
       '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }], s.mode) +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
-      '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label><div class="seg" role="group">' + (s.scaled !== false ? [{ v: 'easy', l: 'Easy 1pt' }, { v: 'medium', l: 'Medium 2pts' }, { v: 'hard', l: 'Hard 3pts' }] : [{ v: 'easy', l: 'Easy' }, { v: 'medium', l: 'Medium' }, { v: 'hard', l: 'Hard' }]).map(function (o) { return '<button class="chip ' + o.v + '" data-act="diff" data-v="' + o.v + '" aria-pressed="' + (s.difficulties.indexOf(o.v) !== -1) + '">' + o.l + '</button>'; }).join('') + '<button class="chip mixed" data-act="diff-all" aria-pressed="' + (!s.difficulties.length) + '">All</button></div>' +
-      '<label class="lbl">Harder questions worth more points</label><div class="seg" role="group"><button class="chip" data-act="scaled" data-v="1" aria-pressed="' + (s.scaled !== false) + '">On (1 / 2 / 3)</button><button class="chip" data-act="scaled" data-v="0" aria-pressed="' + (s.scaled === false) + '">Off (1 each)</button></div>' +
+      '<label class="lbl">Difficulty</label>' + seg('difficulty', [{ v: 'easy', l: 'Easy 1pt', cls: 'easy' }, { v: 'medium', l: 'Medium 2pts', cls: 'medium' }, { v: 'hard', l: 'Hard 3pts', cls: 'hard' }, { v: 'mixed', l: 'Mixed', cls: 'mixed' }], s.difficulty) +
       '<label class="lbl">Number of questions</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
       (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
@@ -226,7 +222,7 @@
   }
 
   /* ---------- leaderboard page ---------- */
-  App.hist = store.get('hist', []); App.alltime = store.get('alltime', {}); App.lbTab = 'recent';
+  App.store = store; App.hist = store.get('hist', []); App.alltime = store.get('alltime', {}); App.lbTab = 'recent';
   App.recordGame = function (g) {
     if (g.recorded) return; g.recorded = true;
     var entry = { t: Date.now(), mode: g.mode, total: g.total, themes: (g.setup.themes.length ? g.setup.themes : ORDER).map(function (k) { return THEMES[k].label; }) };
@@ -288,14 +284,6 @@
     App.setup[k] = (k === 'count' && v !== 'custom') || k === 'timer' ? parseInt(v, 10) : v;
     App.save(); App.render();
   };
-  App.actions.diff = function (el) {
-    var v = el.dataset.v, a = App.setup.difficulties, i = a.indexOf(v);
-    if (i === -1) a.push(v); else a.splice(i, 1);
-    if (a.length === 3) a.length = 0; /* all three = All */
-    App.save(); App.render();
-  };
-  App.actions.scaled = function (el) { App.setup.scaled = el.dataset.v === '1'; App.save(); App.render(); };
-  App.actions['diff-all'] = function () { App.setup.difficulties = []; App.save(); App.render(); };
   App.actions.theme = function (el) {
     var v = el.dataset.v, i = App.setup.themes.indexOf(v);
     if (i === -1) App.setup.themes.push(v); else { App.setup.themes.splice(i, 1); delete App.setup.subs[v]; }
@@ -329,16 +317,13 @@
   };
   App.actions['open-settings'] = function () {
     var T = Object.assign({}, Core.DEFAULT_TEMPLATES, App.templates);
-    function f(k, l) { return '<label class="set-lbl">' + l + '<textarea rows="2" data-tpl="' + k + '">' + esc(T[k]) + '</textarea></label>'; }
-    function tog(id, on, title, sub) { return '<label class="set-row"><span><b>' + title + '</b><small>' + sub + '</small></span><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '></label>'; }
-    App.openModal('<div class="set-head"><h2>Settings</h2><button class="icon-x" data-act="close-modal" aria-label="Close">✕</button></div>' +
-      '<div class="set-card">' + tog('s-calm', App.settings.calm, 'Calm mode', 'Fewer animations') +
-      tog('s-edit', App.settings.editBeforeCopy, 'Edit before copying', 'Check or change the text before it copies') + '</div>' +
-      '<details class="set-card"><summary><b>Copied wording</b><small>What gets pasted into TikTok chat</small></summary>' +
-      '<p class="help">Words in curly brackets are filled in for you: {n} question number, {question} the question, {answer} the answer, {next} next number, {hint} the hint.</p>' +
+    function f(k, l) { return '<label class="help">' + l + '</label><input type="text" data-tpl="' + k + '" value="' + esc(T[k]) + '">'; }
+    App.openModal('<h2>Settings</h2>' +
+      '<label class="row"><input type="checkbox" id="s-calm"' + (App.settings.calm ? ' checked' : '') + ' style="width:22px;height:22px"> Calm mode (reduce motion)</label>' +
+      '<label class="row" style="margin-top:8px"><input type="checkbox" id="s-edit"' + (App.settings.editBeforeCopy ? ' checked' : '') + ' style="width:22px;height:22px"> Show an edit box before copying</label>' +
+      '<h3 style="margin-top:16px">Copy templates</h3><p class="help">Use {n}, {question}, {answer}, {next}, {hint}. Keep them short and natural for text-to-speech.</p>' +
       f('question', 'Question') + f('finalQuestion', 'Final question') + f('answer', 'Answer') + f('finalAnswer', 'Final answer') + f('hint', 'Hint') + f('leadIntro', 'Leaderboard intro') +
-      '<button class="btn small" data-act="reset-templates">Reset wording to default</button></details>' +
-      '<button class="btn primary set-save" data-act="save-settings">Save</button>');
+      '<div class="row" style="margin-top:12px"><button class="btn primary grow" data-act="save-settings">Save</button><button class="btn" data-act="reset-templates">Reset templates</button></div>');
   };
   App.actions['save-settings'] = function () {
     App.settings.calm = document.getElementById('s-calm').checked;
@@ -349,7 +334,7 @@
     });
     App.templates = t; App.save(); App.closeModal(); App.toast('Saved'); App.render();
   };
-  App.actions['reset-templates'] = function () { App.templates = {}; App.save(); App.closeModal(); App.toast('Wording reset'); };
+  App.actions['reset-templates'] = function () { App.templates = {}; App.save(); App.closeModal(); App.toast('Templates reset'); };
   App.actions['close-backdrop'] = function (el, ev) { if (ev.target === el) App.closeModal(); };
 
   /* ---------- events ---------- */
@@ -365,17 +350,6 @@
       ev.preventDefault(); var fn = App.actions[ev.target.dataset.enter]; if (fn) fn(ev.target, ev);
     }
   });
-
-  /* Update 10: lock the page. Blocks pinch zoom (iPhone ignores user-scalable=no for pinches),
-     and when the keyboard closes snaps the page back to the left edge so nothing sits off centre. */
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false }); });
-  document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
-  App.recentre = function (top) {
-    window.scrollTo(0, top ? 0 : window.scrollY);
-    document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0;
-  };
-  document.addEventListener('focusout', function () { setTimeout(function () { if (!document.activeElement || !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) App.recentre(false); }, 60); });
-  window.addEventListener('scroll', function () { if (window.scrollX) window.scrollTo(0, window.scrollY); }, { passive: true });
 
   document.addEventListener('DOMContentLoaded', function () {
     if (App.game && !BY_ID[App.game.ids[App.game.index]]) App.game = null;
