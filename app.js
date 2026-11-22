@@ -86,11 +86,23 @@
   };
   var BANNER = { home: 1, setup: 1, leader: 1 };
   var bgOn = 'bgA', lastKey = null, preloaded = {};
-  function imgUrl(key, variant) { var l = IMG[key] || IMG.general; return IMGDIR + l[(variant || 0) % l.length]; }
+  var portraitMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null, lastArgs = null;
+  function isPortrait() { return !!(portraitMQ && portraitMQ.matches); }
+  function imgUrl(key, variant) {
+    var l = IMG[key] || IMG.general;
+    if (isPortrait()) return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg';
+    return IMGDIR + l[(variant || 0) % l.length];
+  }
+  function setArt() { var vw = window.innerWidth, vh = window.innerHeight, sc = Math.max(vw / 900, vh / 1599), W = 900 * sc, H = 1599 * sc, st = document.documentElement.style;
+    st.setProperty('--ax', ((vw - W) / 2) + 'px'); st.setProperty('--ay', ((vh - H) / 2) + 'px'); st.setProperty('--aw', W + 'px'); st.setProperty('--ah', H + 'px'); }
+  setArt(); window.addEventListener('resize', setArt); window.addEventListener('orientationchange', setArt);
+  if (portraitMQ) { var onOri = function () { if (lastArgs) { lastKey = null; App.setBackdrop(lastArgs[0], lastArgs[1]); } };
+    if (portraitMQ.addEventListener) portraitMQ.addEventListener('change', onOri); else if (portraitMQ.addListener) portraitMQ.addListener(onOri); }
   App.preload = function (key, variant) {
     var u = imgUrl(key, variant); if (preloaded[u]) return; preloaded[u] = 1; var i = new Image(); i.src = u;
   };
   App.setBackdrop = function (key, variant) {
+    lastArgs = [key, variant];
     var th = THEMES[key] || THEMES.general, url = imgUrl(key, variant), sig = url;
     document.body.classList.toggle('pg-banner', !!BANNER[key]); document.body.setAttribute('data-theme', key);
     if (lastKey === sig) return; lastKey = sig;
