@@ -4,11 +4,15 @@ A static website (plain HTML/CSS/JS, **no build step**) that runs on GitHub Page
 
 ## Deploy from your iPhone
 1. In the GitHub app or github.com (Safari → "Request Desktop Website" helps): create a new **public** repository, e.g. `team-leyla-quiz`.
-2. Upload every file from this one folder (all files sit at the top level - no subfolders needed).
+2. Unzip `team-leyla-quiz-hub.zip` in the Files app, then in the repo choose **Add file → Upload files** and upload **everything inside the folder** (keep the folders `css`, `js`, `data`, `icons`, `tools`, `tests`). `index.html` must end up at the top level of the repo.
 3. Repo **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: main, folder: / (root) → Save**.
 4. After about a minute your site is at `https://YOUR-USERNAME.github.io/team-leyla-quiz/`.
 5. Open it in Safari → Share → **Add to Home Screen** for the app icon.
 6. If you update files later, change `VERSION` in `sw.js` (e.g. `tlqh-v2`) so phones refresh the offline cache.
+
+## How the site flows
+Home (Play) → Game selection → Quiz (themed illustrated backdrop per question) → Results popup with copy buttons. 🏆 on the home screen opens the Leaderboard page (recent games and all-time points for this device).
+In Host mode a yellow tab on the right edge slides the live leaderboard in and out.
 
 ## Test checklist on iPhone
 - Host mode, Football, 10 questions → Start. Tap **Copy question**, open TikTok/Notes, paste: `Question 1: …`.
@@ -22,7 +26,7 @@ A static website (plain HTML/CSS/JS, **no build step**) that runs on GitHub Page
 - ⚙️ lets you edit the copy wording and turn on an edit box before copying.
 
 ## Question bank
-- Currently **167 starter questions** across 15 themes. This is **not** 10,000 and not claimed to be.
+- Question count is shown in the 📊 panel. Questions are across 15 themes. This is **not** 10,000 and not claimed to be.
 - All are marked `status: "unreviewed"` — written from general knowledge, **not yet independently verified**. The app says so in the 📊 panel. Only mark `verified` once checked against a source and fill `source.verifiedBy`.
 - Add questions: edit/add files in `tools/src/*.js` (append only), then `node tools/build-bank.js` and `node tools/validate.js` (needs Node; on iPhone you can ask Claude to run these).
 - Validation checks: required fields, 3 distinct wrong options, hint leaking the answer, TTS length, duplicate IDs, near-duplicates (same wording **and** same answer; same answer with different questions is allowed).

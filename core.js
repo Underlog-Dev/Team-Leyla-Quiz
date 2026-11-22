@@ -253,10 +253,18 @@
       normalizeText(q1.answer) === normalizeText(q2.answer);
   }
   function findDuplicates(bank, threshold) {
-    var dups = [];
-    for (var i = 0; i < bank.length; i++) for (var j = i + 1; j < bank.length; j++) {
-      if (isNearDuplicate(bank[i], bank[j], threshold)) dups.push([bank[i].id, bank[j].id]);
-    }
+    var dups = [], byAns = {}, byText = {};
+    bank.forEach(function (q) {
+      var a = normalizeText(q.answer), t = normalizeText(q.question);
+      (byAns[a] = byAns[a] || []).push(q);
+      if (byText[t]) dups.push([byText[t].id, q.id]); else byText[t] = q;
+    });
+    Object.keys(byAns).forEach(function (a) {
+      var g = byAns[a];
+      for (var i = 0; i < g.length; i++) for (var j = i + 1; j < g.length; j++) {
+        if (normalizeText(g[i].question) !== normalizeText(g[j].question) && isNearDuplicate(g[i], g[j], threshold)) dups.push([g[i].id, g[j].id]);
+      }
+    });
     return dups;
   }
 
