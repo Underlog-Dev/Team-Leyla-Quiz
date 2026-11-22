@@ -55,6 +55,7 @@ body:not(.pg-banner) #app{padding-top:56px}
 .setup-grid .col{min-width:0}
 .setup-actions{display:flex;gap:.6em;align-items:center;margin-top:.7em}
 .setup-actions .btn.primary{flex:1}
+.setup-actions .help,.setup-actions .notice{background:rgba(26,8,60,.82);color:#fff;border-radius:999px;padding:.2em .8em;white-space:nowrap}
 .play-btn{font-size:1.6em;min-height:2.6em;padding:.2em 2em;margin:1em auto;display:flex}
 .home-links{display:flex;gap:.6em;justify-content:center;flex-wrap:wrap}
 .home-links .btn{background:rgba(26,8,60,.8);color:#fff;box-shadow:inset 0 0 0 2px rgba(196,130,255,.6)}
@@ -123,7 +124,7 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
 @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.8}}
 
 /* ---------- layout: wide (desktop / landscape tablets). Content is positioned on the 16:9 art. ---------- */
-@media (min-width:900px) and (min-height:540px) and (orientation:landscape){
+@media (min-width:560px) and (orientation:landscape){
   #bgblur{filter:blur(26px) brightness(.8)}
   body.pg-banner #bgblur{background:linear-gradient(#2b1065,#12062f)}
   #bg .bg-layer,body.pg-banner .bg-layer{inset:auto;left:50%;top:50%;width:min(100vw,calc(100vh * 16 / 9));height:min(100vh,calc(100vw * 9 / 16));transform:translate(-50%,-50%);background-size:100% 100%}
@@ -132,7 +133,8 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
   .hud{position:absolute;top:2.2%;right:1.8%}
   .zone{position:absolute}
   .v-home .zone{left:36%;right:36%;top:66%;bottom:6%;display:flex;flex-direction:column;justify-content:center}
-  .v-setup .zone{left:25.2%;right:20.5%;top:36%;bottom:19.6%}
+  .v-setup .zone{left:25.2%;right:20.5%;top:36%;bottom:28%}
+  .v-setup .setup-actions{position:absolute;left:25.2%;right:20.5%;bottom:19.6%;height:7.5%;margin:0;padding:0 .6em;z-index:3}
   .v-leader .zone{left:19.5%;right:17%;top:38%;bottom:17.5%}
   .v-play .zone,.v-results .zone{left:25.5%;right:25.5%;top:7%;bottom:9%;display:flex;flex-direction:column;justify-content:center}
   .v-setup .glass,.v-leader .glass{background:none;border:none;box-shadow:none;padding:.3em .6em;height:100%;overflow:hidden;display:flex;flex-direction:column}
@@ -167,7 +169,7 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
 @media (orientation:portrait){
   /* keep the mascot visible: options scroll above the chick, and the Start bar sits to the right of it */
   .v-setup .zone{height:calc(var(--ah,100vh)*.45)}
-  .v-setup .setup-actions{position:fixed;left:calc(var(--ax,0px) + var(--aw,100vw)*.44);top:calc(var(--ay,0px) + var(--ah,100vh)*.765);width:calc(var(--aw,100vw)*.38);flex-direction:column;align-items:stretch;margin:0;padding:0;gap:.3em;background:none;z-index:5}
+  .v-setup .setup-actions{position:absolute;left:calc(var(--ax,0px) + var(--aw,100vw)*.4);top:calc(var(--ay,0px) + var(--ah,100vh)*.715);width:calc(var(--aw,100vw)*.42);flex-direction:column;align-items:stretch;margin:0;padding:0;gap:.3em;background:none;z-index:5}
   .v-setup .setup-actions .btn{width:100%;padding-inline:.3em;white-space:nowrap}
   .v-setup .setup-actions .help,.v-setup .setup-actions .notice{align-self:center;text-align:center;background:rgba(26,8,60,.82);border-radius:999px;padding:.15em .8em;font-size:.8em}
 }

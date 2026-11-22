@@ -235,7 +235,7 @@
       (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
       '</div><div class="col"><label class="lbl">Themes <span class="help">(pick several, or none for all)</span></label><div class="seg">' + themeChips + '</div>' +
       (subHtml ? '<details style="margin-top:.5em"><summary class="help">Narrow by subcategory (optional)</summary>' + subHtml + '</details>' : '') + '</div></div>' +
-      '<div class="setup-actions">' + msg + '<button class="btn primary" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button></div></section></div></div>';
+      '</section></div><div class="setup-actions">' + msg + '<button class="btn primary" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button></div></div>';
   }
 
   /* ---------- leaderboard page ---------- */
