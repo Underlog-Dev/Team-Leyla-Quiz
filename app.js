@@ -258,10 +258,10 @@
       }).join('') + '</div><div class="row" style="margin-top:.5em"><button class="btn small primary" data-act="copy-alltime">📋 Copy all-time top three</button><button class="btn small danger" data-act="clear-lb">Clear</button></div>'
         : '<p class="help">No host games finished yet. Players you award points to appear here after a quiz ends.</p>';
     } else {
-      body = App.hist.length ? '<div class="lb-scroll">' + App.hist.map(function (h, hi) {
+      body = App.hist.length ? '<div class="lb-scroll">' + App.hist.map(function (h) {
         var d = new Date(h.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         var inner = h.players ? (h.players.slice(0, 3).map(function (p) { return p.rank + '. ' + esc(p.name) + ' (' + p.score + ')'; }).join(' · ') || 'No points awarded') : 'Solo: ' + h.solo.score + ' pts, ' + h.solo.correct + '/' + h.total + ' correct';
-        return '<div class="lb-item" style="display:block"><b>' + d + ' · ' + (h.mode === 'host' ? 'Host' : 'Solo') + ' · ' + h.total + ' questions</b><div class="help">' + inner + '</div>' + (h.players && h.players.length ? '<button class="btn small primary" style="margin-top:.4em" data-act="copy-game" data-i="' + hi + '">\uD83D\uDCCB Copy top three</button>' : '') + '</div>';
+        return '<div class="lb-item" style="display:block"><b>' + d + ' · ' + (h.mode === 'host' ? 'Host' : 'Solo') + ' · ' + h.total + ' questions</b><div class="help">' + inner + '</div></div>';
       }).join('') + '</div>' : '<p class="help">No finished quizzes yet - play one and it appears here.</p>';
     }
     app.innerHTML = '<div class="v-leader">' + App.hud() + '<div class="zone"><section class="glass"><div class="tabs">' +
@@ -273,10 +273,6 @@
   App.actions['copy-alltime'] = function () {
     var list = Object.keys(App.alltime).map(function (k) { return { id: k, name: App.alltime[k].name, score: App.alltime[k].points }; });
     App.copy(Core.leaderboardCopy(list, App.templates), 'leaderboard');
-  };
-  App.actions['copy-game'] = function (el) {
-    var h = App.hist[+el.dataset.i]; if (!h || !h.players) return;
-    App.copy(Core.leaderboardCopy(h.players.map(function (p, i) { return { id: 'h' + i, name: p.name, score: p.score }; }), App.templates), 'leaderboard');
   };
   App.actions['clear-lb'] = function () { if (window.confirm('Clear saved leaderboards on this device?')) { App.hist = []; App.alltime = {}; store.set('hist', []); store.set('alltime', {}); App.render(); } };
   App.actions['go-home'] = function () { App.view = 'home'; App.render(); window.scrollTo(0, 0); };
