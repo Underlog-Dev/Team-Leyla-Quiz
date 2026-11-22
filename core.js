@@ -63,15 +63,13 @@
   function rankPlayers(players) {
     var sorted = players.slice().sort(function (a, b) {
       if (b.score !== a.score) return b.score - a.score;
-      if ((b.tb || 0) !== (a.tb || 0)) return (b.tb || 0) - (a.tb || 0);
       return String(a.name).localeCompare(String(b.name));
     });
-    var out = [], prevScore = null, prevRank = 0, prevTb = 0;
+    var out = [], prevScore = null, prevRank = 0;
     sorted.forEach(function (p, i) {
-      var same = prevScore !== null && p.score === prevScore && (p.tb || 0) === prevTb;
-      var rank = same ? prevRank : i + 1;
-      prevScore = p.score; prevRank = rank; prevTb = p.tb || 0;
-      out.push({ id: p.id, name: p.name, score: p.score, rank: rank, tb: p.tb || 0 });
+      var rank = (prevScore !== null && p.score === prevScore) ? prevRank : i + 1;
+      prevScore = p.score; prevRank = rank;
+      out.push({ id: p.id, name: p.name, score: p.score, rank: rank });
     });
     return out;
   }
@@ -112,33 +110,8 @@
     var names = winners.map(function (p) { return p.name; });
     var pts = winners[0].score;
     var ptsWord = pts === 1 ? 'point' : 'points';
-    if (names.length === 1) return cleanForTTS(t.winnerIntro + ' ' + names[0] + ' with ' + pts + ' ' + ptsWord + (winners[0].tb ? ', after winning the tiebreaker' : '') + '!');
+    if (names.length === 1) return cleanForTTS(t.winnerIntro + ' ' + names[0] + ' with ' + pts + ' ' + ptsWord + '!');
     return cleanForTTS(t.jointWinnerIntro + '! ' + joinNames(names) + ' share first place with ' + pts + ' ' + ptsWord + ' each!');
-  }
-
-  /* ---------- tiebreakers: closest number wins ---------- */
-  function parseGuess(str) {
-    var t = String(str == null ? '' : str).replace(/[\s,\u00A3$%]/g, '');
-    if (!/^-?\d+(\.\d+)?$/.test(t)) return null;
-    return parseFloat(t);
-  }
-  /* entries: [{id, name, guess}] -> {rows (closest first), winners (ids), tie} */
-  function tiebreakRound(entries, answer) {
-    var rows = entries.map(function (e) {
-      var v = parseGuess(e.guess);
-      return { id: e.id, name: e.name, guess: e.guess, value: v, diff: v === null ? null : Math.abs(v - answer) };
-    });
-    rows.sort(function (a, b) { return (a.diff === null ? Infinity : a.diff) - (b.diff === null ? Infinity : b.diff); });
-    var best = rows.length && rows[0].diff !== null ? rows[0].diff : null;
-    var winners = best === null ? [] : rows.filter(function (r) { return r.diff === best; }).map(function (r) { return r.id; });
-    return { rows: rows, winners: winners, tie: winners.length !== 1, noGuesses: best === null };
-  }
-  function pickTiebreaker(list, usedIds, themes) {
-    var free = list.filter(function (q) { return usedIds.indexOf(q.id) === -1; });
-    if (!free.length) free = list.slice();
-    var pref = themes && themes.length ? free.filter(function (q) { return themes.indexOf(q.theme) !== -1; }) : [];
-    var pool = pref.length ? pref : free;
-    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   }
 
   /* ---------- host scoring ---------- */
@@ -177,22 +150,6 @@
     if (!p) return false;
     p.score += delta;
     state.history.push({ type: 'adjust', playerId: playerId, points: delta });
-    return true;
-  }
-
-  /* Take back one player's award for a question (fixing a wrong name). Returns true if something was removed. */
-  function removeAward(state, playerId, qIndex) {
-    var hi = -1;
-    for (var i = state.history.length - 1; i >= 0; i--) {
-      var h = state.history[i]; if (h.type === 'award' && h.playerId === playerId && h.qIndex === qIndex) { hi = i; break; }
-    }
-    var list = state.awards[String(qIndex)] || [], at = list.indexOf(playerId);
-    if (hi === -1 || at === -1) return false;
-    var h = state.history.splice(hi, 1)[0], pi = -1;
-    state.players.forEach(function (p, i) { if (p.id === playerId) pi = i; });
-    if (pi === -1) return false;
-    var p = state.players[pi]; p.score -= h.points; list.splice(at, 1);
-    if (h.created && p.score === 0 && !state.history.some(function (x) { return x.playerId === p.id; })) state.players.splice(pi, 1);
     return true;
   }
 
@@ -296,18 +253,10 @@
       normalizeText(q1.answer) === normalizeText(q2.answer);
   }
   function findDuplicates(bank, threshold) {
-    var dups = [], byAns = {}, byText = {};
-    bank.forEach(function (q) {
-      var a = normalizeText(q.answer), t = normalizeText(q.question);
-      (byAns[a] = byAns[a] || []).push(q);
-      if (byText[t]) dups.push([byText[t].id, q.id]); else byText[t] = q;
-    });
-    Object.keys(byAns).forEach(function (a) {
-      var g = byAns[a];
-      for (var i = 0; i < g.length; i++) for (var j = i + 1; j < g.length; j++) {
-        if (normalizeText(g[i].question) !== normalizeText(g[j].question) && isNearDuplicate(g[i], g[j], threshold)) dups.push([g[i].id, g[j].id]);
-      }
-    });
+    var dups = [];
+    for (var i = 0; i < bank.length; i++) for (var j = i + 1; j < bank.length; j++) {
+      if (isNearDuplicate(bank[i], bank[j], threshold)) dups.push([bank[i].id, bank[j].id]);
+    }
     return dups;
   }
 
@@ -354,7 +303,7 @@
     var quizQs = bank.filter(function (q) { return inQuiz[q.id]; });
     function ok(q) {
       if (used[q.id] || rej[q.id] || inQuiz[q.id] || q.id === current.id) return false;
-      if (q.difficulty !== (ctx.difficulty || current.difficulty)) return false;
+      if (q.difficulty !== current.difficulty) return false;
       if (ctx.themes && ctx.themes.length && ctx.themes.indexOf(q.theme) === -1) return false;
       return !quizQs.some(function (p) { return isNearDuplicate(p, q); });
     }
@@ -437,7 +386,7 @@
     availablePoints: availablePoints, ordinal: ordinal,
     questionCopy: questionCopy, answerCopy: answerCopy, hintCopy: hintCopy,
     rankPlayers: rankPlayers, leaderboardCopy: leaderboardCopy, winnerCopy: winnerCopy,
-    newHostState: newHostState, parseGuess: parseGuess, tiebreakRound: tiebreakRound, pickTiebreaker: pickTiebreaker, joinNames: joinNames, cleanForTTS: cleanForTTS, awardPoints: awardPoints, adjustPoints: adjustPoints, removeAward: removeAward,
+    newHostState: newHostState, awardPoints: awardPoints, adjustPoints: adjustPoints,
     undoLast: undoLast, renamePlayer: renamePlayer, removePlayer: removePlayer,
     normalizeText: normalizeText, checkAnswer: checkAnswer,
     similarity: similarity, isNearDuplicate: isNearDuplicate, findDuplicates: findDuplicates,

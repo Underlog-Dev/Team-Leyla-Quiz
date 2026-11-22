@@ -28,24 +28,22 @@
   function setTimer() { var g = App.game; g.timerEnd = g.timer ? Date.now() + g.timer * 1000 : 0; }
 
   /* ---------- play screen ---------- */
-  App.lbOpen = false;
   App.renderPlay = function (app) {
     var g = App.game, cur = g.cur, Q = q(), th = THEMES[Q.theme] || THEMES.general;
     clearInterval(tick);
-    App.setBackdrop(Q.theme, g.index);
-    var nq = BY_ID[g.ids[g.index + 1]]; if (nq) App.preload(nq.theme, g.index + 1);
+    App.setBackdrop(Q.theme);
     var isHost = g.mode === 'host', pts = points(), last = g.index === g.total - 1;
     if (g.format === 'mc' && !cur.options) cur.options = Core.mcOptions(Q);
     var head = '<div class="qhead"><span class="pill">' + (last ? 'Final question' : 'Question ' + (g.index + 1)) + ' of ' + g.total + '</span>' +
-      '<span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' \u00B7 ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>';
+      '<span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>';
     var body = isHost ? hostBody(Q, cur, last) : soloBody(Q, cur, last);
-    var main = '<section class="zone"><div class="qwrap">' + head + '<div class="qcard" id="qcard">' +
+    var main = '<section class="qwrap">' + head + '<div class="qcard" id="qcard">' +
       (g.timer && !cur.answered ? '<div class="timer" id="timer"></div>' : '') +
       '<div class="qtext" id="qtext">' + esc(Q.question) + '</div>' + body + '</div>' +
-      '<div class="minor"><button class="btn small" data-act="flag">\uD83D\uDEA9 Report wrong</button><button class="btn small" data-act="quit">Quit quiz</button></div></div></section>';
-    var extra = '<button class="icon-btn quit-btn" data-act="quit" aria-label="Quit quiz">\u2715 Quit</button><button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">\u26F6</button>';
-    var drawer = isHost ? '<aside class="drawer' + (App.lbOpen ? ' open' : '') + '" id="lb" aria-label="Leaderboard"><button class="drawer-tab" data-act="toggle-lb" aria-label="Show or hide leaderboard"><b>\uD83C\uDFC6</b><small>Leaders</small><span>\u25C0</span></button><div class="drawer-in">' + leaderboard() + '</div></aside>' : '';
-    app.innerHTML = '<div class="v-play">' + App.hud(extra) + main + drawer + '</div>';
+      '<div class="row"><button class="btn small" data-act="flag">🚩 Report wrong</button><span class="grow"></span>' +
+      '<button class="btn small" data-act="quit">Quit quiz</button></div></section>';
+    var tb = App.topbar((isHost ? '<button class="icon-btn lb-sheet-toggle" data-act="toggle-lb" aria-label="Leaderboard">🏆</button><button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">⛶</button>' : ''));
+    app.innerHTML = tb + '<div class="layout play' + (isHost ? ' host' : '') + '">' + main + (isHost ? '<aside class="card lb-panel" id="lb">' + leaderboard() + '</aside>' : '') + '</div>';
     if (g.timer && !cur.answered) startTick();
   };
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -59,10 +57,6 @@
     return '<div class="answerbox revealed"><div class="help">Answer</div><div class="ans">' + esc(Q.answer) + '</div>' + (Q.explanation ? '<div class="help">' + esc(Q.explanation) + '</div>' : '') + '</div>';
   }
 
-  function easierBtn(Q, cur) {
-    if (cur.answered || (Q.difficulty !== 'hard' && Q.difficulty !== 'medium')) return '';
-    return '<button class="btn" data-act="easier">\u2B07 Easier question</button>';
-  }
   function hostBody(Q, cur, last) {
     var g = App.game;
     var opts = '';
@@ -73,21 +67,21 @@
       }).join('') + '</div><button class="btn small" style="margin-top:8px" data-act="copy-options">Copy options</button>';
     }
     var tools = '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn" data-act="copy-q">📋 Copy question</button>' +
-      '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) +
+      '<button class="btn" data-act="refresh">🔄 Refresh</button>' +
       '<button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button>' +
       (cur.hint ? '<button class="btn" data-act="copy-hint">📋 Copy hint</button>' : '') + '</div>';
     var ans;
     if (!cur.revealed) ans = '<div class="answerbox"><div>🔒 <b>Answer hidden</b></div><button class="btn yellow big" style="margin-top:8px" data-act="reveal">👁 Reveal answer</button></div>';
     else ans = answerBlock(Q) + '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn primary" data-act="copy-a">📋 Copy answer</button></div>';
-    var award = '<div class="row" style="margin-top:12px"><input type="text" id="award-name" placeholder="Winner\u2019s name (+' + points() + ' when you press Next)" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"></div>' + awardedChips();
+    var award = '<div class="row" style="margin-top:12px"><input type="text" id="award-name" placeholder="Player who got it right" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"><button class="btn primary" data-act="award">+' + points() + '</button></div>' + awardedChips();
     var nextLabel = last ? 'Finish quiz 🏁' : 'Next question →';
-    return opts + hintBlock(Q, cur) + tools + ans + award + '<div class="row" style="margin-top:12px;flex-wrap:nowrap">' + (g.index > 0 ? '<button class="btn big" style="width:auto;flex:0 0 auto" data-act="back">\u2190 Back</button>' : '') + '<button class="btn primary big grow" data-act="next">' + nextLabel + '</button></div>';
+    return opts + hintBlock(Q, cur) + tools + ans + award + '<button class="btn primary big" style="margin-top:12px" data-act="next">' + nextLabel + '</button>';
   }
   function awardedChips() {
     var g = App.game, ids = g.host.awards[String(g.index)] || [];
     if (!ids.length) return '';
-    var chips = ids.map(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; return p ? '<button class="chip" data-act="unaward" data-id="' + id + '" aria-label="Take away points from ' + esc(p.name) + '">' + esc(p.name) + ' \u2715</button>' : ''; }).join('');
-    return '<p class="help">\u2705 Scored this question (tap a name to take it back):</p><div class="seg">' + chips + '</div>';
+    var names = ids.map(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; return p ? esc(p.name) : ''; }).filter(Boolean);
+    return '<p class="help">✅ Scored this question: ' + names.join(', ') + '</p>';
   }
 
   function soloBody(Q, cur, last) {
@@ -100,7 +94,7 @@
         html += '<div class="row" style="margin-top:10px"><input type="text" id="guess" class="grow" placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(cur.guess) + '" data-input="guess" data-enter="submit"><button class="btn primary" data-act="submit">Submit</button></div>';
         if (cur.close) html += '<div class="notice" style="margin-top:8px">So close! Does your answer match? <div class="row" style="margin-top:6px"><button class="btn small" data-act="accept-close">Yes, count it</button><button class="btn small" data-act="reject-close">No</button></div></div>';
       }
-      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
+      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button><button class="btn" data-act="giveup">Give up</button></div>';
     } else {
       if (g.format === 'mc') {
         html = hintBlock(Q, cur) + '<div class="mc">' + cur.options.map(function (o, i) {
@@ -155,7 +149,7 @@
 
   /* ---------- shared actions ---------- */
   App.actions.hint = function () {
-    var g = App.game, c = g.cur; if (!c.hint) { c.hint = true; (g.hints = g.hints || {})[g.index] = 1; App.save(); }
+    var c = App.game.cur; if (!c.hint) { c.hint = true; App.save(); }
     App.render();
   };
   App.actions.reveal = function () {
@@ -179,17 +173,6 @@
     App.save(); App.render();
     var card = document.getElementById('qcard'); if (card) card.classList.add('refreshing');
   };
-  /* "Easier question": swap for a question one difficulty level lower (hard -> medium -> easy). */
-  App.actions.easier = function () {
-    var g = App.game, c = g.cur, Q = q(), lower = { hard: 'medium', medium: 'easy' }[Q.difficulty];
-    if (!lower) { App.toast('Already the easiest level'); return; }
-    if (c.answered || (g.mode === 'host' && (g.host.awards[String(g.index)] || []).length)) { App.toast('This question is already scored'); return; }
-    var rej = g.rejected.concat([Q.id]);
-    var rep = Core.findReplacement(App.poolBank(g.setup), Q, { usedIds: App.used, rejectedIds: rej, quizIds: g.ids, themes: [], difficulty: lower });
-    if (!rep) { App.toast('No ' + lower + ' question left for these themes'); return; }
-    g.rejected = rej; g.ids[g.index] = rep.id; g.cur = fresh(); setTimer();
-    App.save(); App.render(); App.toast('Swapped for ' + (lower === 'easy' ? 'an easy' : 'a medium') + ' question');
-  };
   App.actions.flag = function () {
     var Q = q(); if (!window.confirm('Report this question as wrong or unclear? It will be hidden from your future quizzes.')) return;
     if (App.flagged.indexOf(Q.id) === -1) App.flagged.push(Q.id);
@@ -198,38 +181,13 @@
   App.actions.next = function () {
     var g = App.game;
     if (!g.cur.answered && g.mode === 'solo') { /* cannot skip without answering */ App.toast('Answer or give up first'); return; }
-    if (g.mode === 'host') { /* Next question scores whoever's name is typed in */
-      var inp = document.getElementById('award-name');
-      if (inp && inp.value.trim()) {
-        var r = Core.awardPoints(g.host, inp.value, g.index, points());
-        if (r.ok) App.toast('+' + r.points + ' ' + r.player.name + (r.created ? ' (new player)' : ''));
-        else if (r.reason !== 'duplicate') { App.toast('Could not add that name'); return; }
-      }
-    }
     App.markUsed(q().id);
     if (g.index >= g.total - 1) { g.finished = true; App.view = 'results'; App.save(); App.render(); return; }
-    g.index++; g.cur = fresh(); setTimer(); App.save(); App.resetScroll = true; App.render(); window.scrollTo(0, 0);
-  };
-  /* Host: go back a question to fix a wrongly typed name. Its scores stay; tap a scored name to take it back. */
-  function showQuestion(i) {
-    var g = App.game; g.index = i; g.cur = fresh(); g.cur.revealed = true; g.cur.hint = !!(g.hints && g.hints[i]);
-    clearInterval(tick); App.resetScroll = true; App.save(); App.render();
-  }
-  App.actions.back = function () {
-    var g = App.game; if (g.mode !== 'host' || g.index < 1) return;
-    showQuestion(g.index - 1);
-  };
-  App.actions.unaward = function (el) {
-    var g = App.game;
-    if (Core.removeAward(g.host, el.dataset.id, g.index)) { App.save(); App.render(); App.toast('Points taken back - type the right name'); }
-  };
-  App.actions['back-last'] = function () {
-    var g = App.game; if (!g || g.mode !== 'host') return;
-    App.unrecordGame(g); g.finished = false; App.view = 'play'; showQuestion(g.total - 1);
+    g.index++; g.cur = fresh(); setTimer(); App.save(); App.render(); window.scrollTo(0, 0);
   };
   App.actions.quit = function () {
     if (!window.confirm('Quit this quiz? Your progress will be discarded (played questions stay marked as played).')) return;
-    clearInterval(tick); App.game = null; App.lbOpen = false; App.view = 'home'; App.save(); App.render();
+    clearInterval(tick); App.game = null; App.view = 'setup'; App.save(); App.render();
   };
 
   /* ---------- host: scoring & leaderboard ---------- */
@@ -259,7 +217,7 @@
   };
   App.actions.remove = function (el) { if (window.confirm('Remove this player?')) { Core.removePlayer(App.game.host, el.dataset.id); App.save(); App.render(); } };
   App.actions['copy-lb'] = function () { App.copy(Core.leaderboardCopy(App.game.host.players, App.templates), 'leaderboard'); };
-  App.actions['toggle-lb'] = function () { var el = document.getElementById('lb'); if (!el) return; App.lbOpen = !el.classList.contains('open'); el.classList.toggle('open', App.lbOpen); };
+  App.actions['toggle-lb'] = function () { var el = document.getElementById('lb'); if (el) el.classList.toggle('open'); };
   App.actions.fullscreen = function () {
     document.body.classList.toggle('fullscreen-host');
     var d = document, de = d.documentElement;
@@ -276,114 +234,26 @@
       document.body.appendChild(s); setTimeout(function (n) { return function () { n.remove(); }; }(s), 4500);
     }
   }
-  /* ---------- tiebreaker: closest number wins ---------- */
-  function topTied(g) {
-    var r = Core.rankPlayers(g.host.players).filter(function (p) { return p.rank === 1; });
-    return r.length > 1 && r[0].score > 0 ? r : [];
-  }
-  function tieBanner(g) {
-    var t = topTied(g); if (!t.length) return '';
-    return '<div class="tie-banner"><b>\uD83E\uDD1D It\u2019s a tie for first!</b><span>' + esc(Core.joinNames(t.map(function (p) { return p.name; }))) + ' on ' + t[0].score + ' pts</span><button class="btn yellow" data-act="tb-start">\u26A1 Play tiebreaker</button></div>';
-  }
-  var tbUsed = App.store.get('tbused', []);
-  function tbPick(g) {
-    var themes = (g.setup && g.setup.themes) || [];
-    var qn = Core.pickTiebreaker(window.TIEBREAKERS || [], tbUsed, themes);
-    if (!qn) { App.toast('No tiebreaker questions loaded'); return false; }
-    tbUsed.push(qn.id); App.store.set('tbused', tbUsed.slice(-400));
-    g.tb.qid = qn.id; g.tb.revealed = false; g.tb.result = null; g.tb.guesses = {};
-    return true;
-  }
-  function fmtAns(Q) { return Q.unit === 'year' ? String(Q.answer) : Q.answer.toLocaleString('en-GB') + (Q.unit ? ' ' + Q.unit : ''); }
-  function tbQ(g) { return (window.TIEBREAKERS || []).filter(function (x) { return x.id === g.tb.qid; })[0]; }
-  App.actions['tb-start'] = function () {
-    var g = App.game, tied = topTied(g); if (!tied.length) return;
-    g.tb = { ids: tied.map(function (p) { return p.id; }), round: 1 };
-    if (!tbPick(g)) { g.tb = null; return; }
-    [].forEach.call(document.querySelectorAll('.confetti'), function (n) { n.remove(); });
-    App.unrecordGame(g); App.view = 'tiebreak'; App.resetScroll = true; App.save(); App.render();
-  };
-  App.actions['tb-new'] = function () { var g = App.game; if (g.tb && !g.tb.revealed && tbPick(g)) { App.save(); App.render(); } };
-  App.actions['tb-reveal'] = function () {
-    var g = App.game, tb = g.tb, Q = tbQ(g); if (!tb || tb.revealed) return;
-    var entries = tb.ids.map(function (id) {
-      var p = g.host.players.filter(function (x) { return x.id === id; })[0], inp = document.querySelector('.tb-in[data-id="' + id + '"]');
-      tb.guesses[id] = inp ? inp.value : (tb.guesses[id] || '');
-      return { id: id, name: p.name, guess: tb.guesses[id] };
-    });
-    var res = Core.tiebreakRound(entries, Q.answer);
-    if (res.noGuesses) { App.toast('Type at least one number first'); return; }
-    tb.result = res; tb.revealed = true;
-    if (res.winners.length < tb.ids.length) res.winners.forEach(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; p.tb = (p.tb || 0) + 1; });
-    App.save(); App.render();
-  };
-  App.actions['tb-again'] = function () {
-    var g = App.game, tb = g.tb; if (!tb || !tb.revealed) return;
-    tb.ids = tb.result.winners.length ? tb.result.winners.slice() : tb.ids; tb.round++;
-    if (tbPick(g)) { App.save(); App.render(); }
-  };
-  App.actions['tb-finish'] = function () { var g = App.game; g.tb = null; App.view = 'results'; App.resetScroll = true; App.save(); App.render(); };
-  App.actions['tb-copy-q'] = function () {
-    var g = App.game, Q = tbQ(g), names = g.tb.ids.map(function (id) { return g.host.players.filter(function (x) { return x.id === id; })[0].name; });
-    App.copy(Core.cleanForTTS('Tiebreaker for first place between ' + Core.joinNames(names) + '! Closest answer wins. ' + Q.question), 'tiebreaker');
-  };
-  App.actions['tb-copy-r'] = function () {
-    var g = App.game, tb = g.tb, Q = tbQ(g), r = tb.result, ans = fmtAns(Q);
-    var w = r.winners.map(function (id) { return r.rows.filter(function (x) { return x.id === id; })[0]; });
-    var txt = r.winners.length === 1
-      ? 'The answer is ' + ans + '! Closest was ' + w[0].name + ' with ' + w[0].guess + '. ' + w[0].name + ' wins the tiebreaker!'
-      : 'The answer is ' + ans + '! ' + Core.joinNames(w.map(function (x) { return x.name; })) + ' were equally close. Still a tie!';
-    App.copy(Core.cleanForTTS(txt), 'tiebreaker result');
-  };
-  App.renderTiebreak = function (app) {
-    var g = App.game, tb = g.tb, Q = tb && tbQ(g);
-    if (!Q) { App.view = 'results'; return App.render(); }
-    var th = window.THEMES[Q.theme] || window.THEMES.general;
-    App.setBackdrop(Q.theme, 0);
-    var byId = function (id) { return g.host.players.filter(function (x) { return x.id === id; })[0]; };
-    var inner;
-    if (!tb.revealed) {
-      inner = '<p class="help">Everyone types a number. Closest wins.</p>' +
-        tb.ids.map(function (id) { return '<div class="tb-row"><span class="lb-name">' + esc(byId(id).name) + '</span><input class="tb-in" data-id="' + id + '" inputmode="decimal" autocomplete="off" placeholder="Number" value="' + esc(tb.guesses[id] || '') + '"></div>'; }).join('') +
-        '<div class="row" style="margin-top:.7em"><button class="btn primary big grow" data-act="tb-reveal">\uD83D\uDD0D Reveal answer</button></div>' +
-        '<div class="row" style="margin-top:.4em"><button class="btn" data-act="tb-copy-q">\uD83D\uDCCB Copy question</button><button class="btn" data-act="tb-new">\uD83D\uDD04 Different question</button></div>';
-    } else {
-      var r = tb.result, ans = fmtAns(Q);
-      inner = '<div class="answerbox"><span class="help" style="margin:0">Answer</span><div class="ans">' + esc(ans) + '</div></div>' +
-        r.rows.map(function (x) {
-          var win = r.winners.indexOf(x.id) !== -1;
-          return '<div class="tb-row' + (win ? ' win' : '') + '"><span class="lb-name">' + (win ? '\uD83D\uDC51 ' : '') + esc(x.name) + '</span><span>' + (x.diff === null ? 'no number' : esc(String(x.guess)) + ' (off by ' + x.diff.toLocaleString('en-GB') + ')') + '</span></div>';
-        }).join('') +
-        (r.winners.length === 1 ? '<p class="tie-win">\uD83C\uDFC6 ' + esc(byId(r.winners[0]).name) + ' wins the tiebreaker!</p>' : '<p class="tie-win">\uD83E\uDD1D Still tied!</p>') +
-        '<div class="row" style="margin-top:.6em"><button class="btn" data-act="tb-copy-r">\uD83D\uDCCB Copy result</button>' +
-        (r.winners.length === 1 ? '<button class="btn primary grow" data-act="tb-finish">See final leaderboard \u2192</button>' : '<button class="btn primary grow" data-act="tb-again">\u26A1 Another tiebreaker</button><button class="btn" data-act="tb-finish">Keep joint win</button>') + '</div>';
-    }
-    app.innerHTML = '<div class="v-play">' + App.hud() + '<div class="zone"><div class="qwrap"><div class="qcard"><div class="qhead"><span class="pill">\uD83E\uDD1D Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">Closest wins</span></div>' +
-      '<h2 class="qtext" id="qtext">' + esc(Q.question) + '</h2>' + inner + '</div></div></div></div>';
-  };
   App.renderResults = function (app) {
-    var g = App.game; clearInterval(tick);
-    App.setBackdrop((BY_ID[g.ids[g.total - 1]] || {}).theme || 'general', g.total - 1);
-    App.recordGame(g);
+    var g = App.game; clearInterval(tick); App.setBackdrop('general');
     var body;
     if (g.mode === 'host') {
-      var ranked = Core.rankPlayers(g.host.players), medal = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
-      body = '<h2>\uD83C\uDFC6 Final leaderboard</h2>' + (ranked.length ? ranked.slice(0, 10).map(function (p) {
-        return '<div class="lb-item"><span class="lb-rank">' + (medal[p.rank] || p.rank) + '</span><span class="lb-name">' + esc(p.name) + '</span><span class="lb-score">' + p.score + ' pts</span></div>';
+      var ranked = Core.rankPlayers(g.host.players);
+      body = '<h2>🏆 Final results</h2>' + (ranked.length ? ranked.map(function (p) {
+        return '<div class="lb-item"><span class="lb-rank">' + p.rank + '</span><span class="lb-name">' + esc(p.name) + '</span><span class="lb-score">' + p.score + ' pts</span></div>';
       }).join('') : '<p>No points were awarded.</p>') +
-        tieBanner(g) +
-        '<div class="row" style="margin-top:.8em;justify-content:center"><button class="btn primary" data-act="copy-lb">\uD83D\uDCCB Copy top three</button><button class="btn yellow" data-act="copy-winner">\uD83D\uDCCB Copy winner</button></div>';
+        '<div class="row" style="margin-top:12px"><button class="btn primary" data-act="copy-winner">📋 Copy winner announcement</button><button class="btn" data-act="copy-lb">📋 Copy top three</button></div>';
     } else {
       var max = g.solo.log.reduce(function (a, l) { return a + Core.BASE_POINTS[BY_ID[l.id].difficulty]; }, 0);
-      body = '<h2>\uD83C\uDF89 Quiz complete!</h2><div class="big-score">' + g.solo.score + ' pt' + (g.solo.score === 1 ? '' : 's') + '</div><p>' + g.solo.correct + ' of ' + g.total + ' correct \u00B7 best possible ' + max + '</p>' +
-        '<div style="max-height:30vh;overflow:auto;text-align:left">' + g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '\u2705' : '\u274C') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('') + '</div>';
+      body = '<h2>🎉 Quiz complete!</h2><div class="qtext">' + g.solo.score + ' point' + (g.solo.score === 1 ? '' : 's') + '</div><p>' + g.solo.correct + ' of ' + g.total + ' correct · best possible ' + max + ' pts</p>' +
+        g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '✅' : '❌') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('');
     }
-    app.innerHTML = '<div class="v-results">' + App.hud() + '<div class="pop-back"><div class="pop">' + window.CHICK_SVG.replace('class="chick-svg"', 'class="chick-svg" style="width:70px;height:70px"') + body +
-      '<div class="row" style="margin-top:.8em;justify-content:center">' + (g.mode === 'host' ? '<button class="btn" data-act="back-last">\u21A9 Back to last question</button>' : '') + '<button class="btn" data-act="again">Play again</button><button class="btn" data-act="home">New setup</button><button class="btn" data-act="go-leader">\uD83C\uDFC6 Leaderboards</button></div></div></div></div>';
+    app.innerHTML = App.topbar() + '<div class="layout"><section class="card" style="text-align:center">' + window.CHICK_SVG.replace('chick-svg', 'chick-svg" style="width:90px;height:90px') + body +
+      '<div class="row" style="margin-top:14px;justify-content:center"><button class="btn yellow" data-act="again">Play again with same settings</button><button class="btn" data-act="home">New setup</button></div></section></div>';
     confetti();
   };
   App.actions['copy-winner'] = function () { App.copy(Core.winnerCopy(App.game.host.players, App.templates), 'winner'); };
-  function startFresh() { App.game = null; App.lbOpen = false; App.view = 'setup'; App.save(); }
+  function startFresh() { App.game = null; App.view = 'setup'; App.save(); }
   App.actions.home = function () { startFresh(); App.render(); };
   App.actions.again = function () { var s = App.game ? App.game.setup : App.setup; App.setup = Object.assign({}, App.setup, s); startFresh(); App.actions.start(); };
 })();

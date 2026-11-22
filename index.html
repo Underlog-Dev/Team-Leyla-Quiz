@@ -15,14 +15,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="style.css">
 </head>
-<body class="pg-banner">
-<div id="bgblur" aria-hidden="true"></div>
+<body data-theme="general">
 <div id="bg" aria-hidden="true"><div class="bg-layer" id="bgA"></div><div class="bg-layer" id="bgB"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<div id="stage"><div id="app"><noscript><p style="padding:2rem;color:#fff">Team Leyla Quiz Hub needs JavaScript to run.</p></noscript></div></div>
+<div id="app">
+  <noscript><p style="padding:2rem">Team Leyla Quiz Hub needs JavaScript to run.</p></noscript>
+</div>
 <div id="modal-root"></div>
 <script src="questions.js"></script>
-<script src="tiebreakers.js"></script>
 <script src="themes.js"></script>
 <script src="core.js"></script>
 <script src="app.js"></script>
