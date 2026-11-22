@@ -8,7 +8,7 @@
   var storage; try { storage = window.localStorage; storage.setItem('tlqh:t', '1'); storage.removeItem('tlqh:t'); } catch (e) { storage = Core.memoryStorage(); }
   var store = Core.makeStore(storage, 'tlqh:guest:');
 
-  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulty: 'mixed', count: 20, custom: '', themes: [], subs: {}, timer: 0 };
+  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulty: ['easy', 'medium', 'hard'], pointsMode: 'diff', flatPts: 1, count: 20, custom: '', themes: [], subs: {}, timer: 0 };
   var DEFAULT_SETTINGS = { calm: false, editBeforeCopy: false };
 
   var App = window.App = {
@@ -191,8 +191,20 @@
       return '<button class="chip ' + (o.cls || '') + '" data-act="set" data-k="' + name + '" data-v="' + o.v + '" aria-pressed="' + (String(cur) === String(o.v)) + '">' + o.l + '</button>';
     }).join('') + '</div>';
   }
+  /* difficulty is a list of the levels to include (older saves stored one word) */
+  App.diffList = function (s) {
+    var d = s.difficulty;
+    if (Array.isArray(d)) return d.length ? d : ['easy', 'medium', 'hard'];
+    return (!d || d === 'mixed') ? ['easy', 'medium', 'hard'] : [d];
+  };
+  function multi(opts, curList, act) {
+    return '<div class="seg" role="group">' + opts.map(function (o) {
+      return '<button class="chip ' + (o.cls || '') + '" data-act="' + act + '" data-v="' + o.v + '" aria-pressed="' + o.on + '">' + o.l + '</button>';
+    }).join('') + '</div>';
+  }
   function renderSetup(app) {
-    var s = App.setup, pool = App.poolBank(s);
+    var s = App.setup; s.difficulty = App.diffList(s); if (!s.pointsMode) s.pointsMode = 'diff'; if (!s.flatPts) s.flatPts = 1;
+    var dl = s.difficulty, flat = s.pointsMode === 'flat', pool = App.poolBank(s);
     var avail = Core.availableQuestions(pool, { themes: [], difficulty: s.difficulty }, App.used).length;
     var want = s.count === 'custom' ? Math.max(1, parseInt(s.custom, 10) || 0) : s.count;
     var themeChips = ORDER.map(function (k) {
@@ -212,7 +224,13 @@
     app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' +
       '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }], s.mode) +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
-      '<label class="lbl">Difficulty</label>' + seg('difficulty', [{ v: 'easy', l: 'Easy 1pt', cls: 'easy' }, { v: 'medium', l: 'Medium 2pts', cls: 'medium' }, { v: 'hard', l: 'Hard 3pts', cls: 'hard' }, { v: 'mixed', l: 'Mixed', cls: 'mixed' }], s.difficulty) +
+      '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label>' + multi([
+        { v: 'easy', l: 'Easy' + (flat ? '' : ' 1pt'), cls: 'easy', on: dl.indexOf('easy') !== -1 },
+        { v: 'medium', l: 'Medium' + (flat ? '' : ' 2pts'), cls: 'medium', on: dl.indexOf('medium') !== -1 },
+        { v: 'hard', l: 'Hard' + (flat ? '' : ' 3pts'), cls: 'hard', on: dl.indexOf('hard') !== -1 },
+        { v: 'all', l: 'Mixed (all)', cls: 'mixed', on: dl.length === 3 }], dl, 'diff') +
+      '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every question' }], s.pointsMode) +
+      (flat ? '<label class="lbl">Points per question</label>' + seg('flatPts', [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 5, l: '5' }], s.flatPts) : '') +
       '<label class="lbl">Number of questions</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
       (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
@@ -285,7 +303,14 @@
 
   App.actions.set = function (el) {
     var k = el.dataset.k, v = el.dataset.v;
-    App.setup[k] = (k === 'count' && v !== 'custom') || k === 'timer' ? parseInt(v, 10) : v;
+    App.setup[k] = (k === 'count' && v !== 'custom') || k === 'timer' || k === 'flatPts' ? parseInt(v, 10) : v;
+    App.save(); App.render();
+  };
+  App.actions.diff = function (el) {
+    var v = el.dataset.v, d = App.diffList(App.setup).slice(), ALL = ['easy', 'medium', 'hard'];
+    if (v === 'all') d = ALL.slice();
+    else { var i = d.indexOf(v); if (i === -1) d.push(v); else if (d.length > 1) d.splice(i, 1); }
+    App.setup.difficulty = ALL.filter(function (x) { return d.indexOf(x) !== -1; });
     App.save(); App.render();
   };
   App.actions.theme = function (el) {

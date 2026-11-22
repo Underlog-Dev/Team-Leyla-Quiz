@@ -6,17 +6,17 @@
 
   function q() { return BY_ID[App.game.ids[App.game.index]]; }
   function fresh() { return { revealed: false, hint: false, answered: false, correct: null, pick: null, guess: '', close: false, options: null }; }
-  function points() { var c = App.game.cur; return Core.availablePoints(q().difficulty, c.hint); }
+  function points() { var g = App.game, c = g.cur; return Core.availablePoints(q().difficulty, c.hint, g.flat || 0); }
 
   /* ---------- start ---------- */
   App.actions.start = function () {
     var s = App.setup, pool = App.poolBank(s);
     var want = s.count === 'custom' ? Math.max(1, parseInt(s.custom, 10) || 0) : s.count;
     if (!want) { App.toast('Enter how many questions'); return; }
-    var res = Core.buildQuiz(pool, { themes: [], difficulty: s.difficulty }, Math.min(want, 500), App.used);
+    var res = Core.buildQuiz(pool, { themes: [], difficulty: App.diffList(s) }, Math.min(want, 500), App.used);
     if (!res.questions.length) { App.toast('No unused questions left for these settings'); return; }
     App.game = {
-      mode: s.mode, format: s.format, difficulty: s.difficulty, timer: s.mode === 'solo' ? s.timer : 0,
+      mode: s.mode, format: s.format, difficulty: App.diffList(s), flat: s.pointsMode === 'flat' ? (s.flatPts || 1) : 0, timer: s.mode === 'solo' ? s.timer : 0,
       setup: JSON.parse(JSON.stringify(s)),
       ids: res.questions.map(function (x) { return x.id; }), total: res.questions.length, index: 0,
       rejected: [], finished: false, cur: fresh(), solo: { score: 0, correct: 0, log: [] }, host: Core.newHostState(), started: Date.now()
@@ -374,7 +374,7 @@
         tieBanner(g) +
         '<div class="row" style="margin-top:.8em;justify-content:center"><button class="btn primary" data-act="copy-lb">\uD83D\uDCCB Copy top three</button><button class="btn yellow" data-act="copy-winner">\uD83D\uDCCB Copy winner</button></div>';
     } else {
-      var max = g.solo.log.reduce(function (a, l) { return a + Core.BASE_POINTS[BY_ID[l.id].difficulty]; }, 0);
+      var max = g.solo.log.reduce(function (a, l) { return a + (g.flat || Core.BASE_POINTS[BY_ID[l.id].difficulty]); }, 0);
       body = '<h2>\uD83C\uDF89 Quiz complete!</h2><div class="big-score">' + g.solo.score + ' pt' + (g.solo.score === 1 ? '' : 's') + '</div><p>' + g.solo.correct + ' of ' + g.total + ' correct \u00B7 best possible ' + max + '</p>' +
         '<div style="max-height:30vh;overflow:auto;text-align:left">' + g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '\u2705' : '\u274C') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('') + '</div>';
     }

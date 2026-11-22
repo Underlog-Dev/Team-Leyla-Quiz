@@ -9,8 +9,8 @@
   var DIFFICULTIES = ['easy', 'medium', 'hard'];
 
   /* ---------- points & hints ---------- */
-  function availablePoints(difficulty, hintUsed) {
-    var base = BASE_POINTS[difficulty] || 1;
+  function availablePoints(difficulty, hintUsed, flat) {
+    var base = flat > 0 ? flat : (BASE_POINTS[difficulty] || 1);
     return hintUsed ? Math.max(1, base - 1) : base;
   }
 
@@ -323,7 +323,10 @@
 
   function matchesFilters(q, f) {
     if (f.themes && f.themes.length && f.themes.indexOf(q.theme) === -1) return false;
-    if (f.difficulty && f.difficulty !== 'mixed' && q.difficulty !== f.difficulty) return false;
+    if (f.difficulty && f.difficulty !== 'mixed') {
+      var ds = Array.isArray(f.difficulty) ? f.difficulty : [f.difficulty];
+      if (ds.length && ds.length < 3 && ds.indexOf(q.difficulty) === -1) return false;
+    }
     return true;
   }
 
