@@ -44,7 +44,7 @@
       '<div class="qtext" id="qtext">' + esc(Q.question) + '</div>' + body + '</div>' +
       '<div class="minor"><button class="btn small" data-act="flag">\uD83D\uDEA9 Report wrong</button><button class="btn small" data-act="quit">Quit quiz</button></div></div></section>';
     var extra = '<button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">\u26F6</button>';
-    var drawer = isHost ? '<aside class="drawer' + (App.lbOpen ? ' open' : '') + '" id="lb" aria-label="Leaderboard"><button class="drawer-tab" data-act="toggle-lb" aria-label="Show or hide leaderboard"><span>\u25C0</span></button><div class="drawer-in">' + leaderboard() + '</div></aside>' : '';
+    var drawer = isHost ? '<aside class="drawer' + (App.lbOpen ? ' open' : '') + '" id="lb" aria-label="Leaderboard"><button class="drawer-tab" data-act="toggle-lb" aria-label="Show or hide leaderboard"><b>\uD83C\uDFC6</b><small>Leaders</small><span>\u25C0</span></button><div class="drawer-in">' + leaderboard() + '</div></aside>' : '';
     app.innerHTML = '<div class="v-play">' + App.hud(extra) + main + drawer + '</div>';
     if (g.timer && !cur.answered) startTick();
   };
@@ -75,7 +75,7 @@
     var ans;
     if (!cur.revealed) ans = '<div class="answerbox"><div>🔒 <b>Answer hidden</b></div><button class="btn yellow big" style="margin-top:8px" data-act="reveal">👁 Reveal answer</button></div>';
     else ans = answerBlock(Q) + '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn primary" data-act="copy-a">📋 Copy answer</button></div>';
-    var award = '<div class="row" style="margin-top:12px"><input type="text" id="award-name" placeholder="Player who got it right" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"><button class="btn primary" data-act="award">+' + points() + '</button></div>' + awardedChips();
+    var award = '<div class="row" style="margin-top:12px"><input type="text" id="award-name" placeholder="Winner\u2019s name (+' + points() + ' when you press Next)" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"></div>' + awardedChips();
     var nextLabel = last ? 'Finish quiz 🏁' : 'Next question →';
     return opts + hintBlock(Q, cur) + tools + ans + award + '<button class="btn primary big" style="margin-top:12px" data-act="next">' + nextLabel + '</button>';
   }
@@ -183,6 +183,14 @@
   App.actions.next = function () {
     var g = App.game;
     if (!g.cur.answered && g.mode === 'solo') { /* cannot skip without answering */ App.toast('Answer or give up first'); return; }
+    if (g.mode === 'host') { /* Next question scores whoever's name is typed in */
+      var inp = document.getElementById('award-name');
+      if (inp && inp.value.trim()) {
+        var r = Core.awardPoints(g.host, inp.value, g.index, points());
+        if (r.ok) App.toast('+' + r.points + ' ' + r.player.name + (r.created ? ' (new player)' : ''));
+        else if (r.reason !== 'duplicate') { App.toast('Could not add that name'); return; }
+      }
+    }
     App.markUsed(q().id);
     if (g.index >= g.total - 1) { g.finished = true; App.view = 'results'; App.save(); App.render(); return; }
     g.index++; g.cur = fresh(); setTimer(); App.save(); App.resetScroll = true; App.render(); window.scrollTo(0, 0);
