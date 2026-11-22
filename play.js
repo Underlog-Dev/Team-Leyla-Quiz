@@ -100,7 +100,7 @@
         html += '<div class="row" style="margin-top:10px"><input type="text" id="guess" class="grow" placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(cur.guess) + '" data-input="guess" data-enter="submit"><button class="btn primary" data-act="submit">Submit</button></div>';
         if (cur.close) html += '<div class="notice" style="margin-top:8px">So close! Does your answer match? <div class="row" style="margin-top:6px"><button class="btn small" data-act="accept-close">Yes, count it</button><button class="btn small" data-act="reject-close">No</button></div></div>';
       }
-      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
+      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="copy-q">📋 Copy question</button><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
     } else {
       if (g.format === 'mc') {
         html = hintBlock(Q, cur) + '<div class="mc">' + cur.options.map(function (o, i) {
