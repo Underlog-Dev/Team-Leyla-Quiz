@@ -29,9 +29,9 @@
 
   var DEFAULT_TEMPLATES = {
     question: 'Question {n}: {question}',
-    finalQuestion: 'Final question: {question}',
-    answer: 'CORRECT! The answer is {answer}, onto question {next}!',
-    finalAnswer: 'CORRECT! The answer is {answer}! That’s the end of the quiz!',
+    finalQuestion: 'Question {n}: {question}',
+    answer: 'CORRECT! The answer is {answer}. Onto question {next}',
+    finalAnswer: 'CORRECT! The answer is {answer}. That’s the end of the quiz!',
     hint: 'Hint for question {n}: {hint}',
     leadIntro: 'In the lead!',
     winnerIntro: 'The winner is',
@@ -42,21 +42,43 @@
     return tpl.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? vars[k] : ''; });
   }
 
-  function questionCopy(n, total, text, templates) {
+  /* TikTok live comments are limited to 150 characters: cut at a word boundary if ever longer. */
+  var COMMENT_MAX = 150;
+  function fitComment(text) {
+    text = cleanForTTS(text);
+    if (text.length <= COMMENT_MAX) return text;
+    var cut = text.slice(0, COMMENT_MAX - 1), i = cut.lastIndexOf(' ');
+    return (i > 60 ? cut.slice(0, i) : cut).replace(/[\s,;:.-]+$/, '') + '…';
+  }
+  /* question and answer wording is fixed so every comment looks the same on stream */
+  function fixedTemplates(templates) {
     var t = Object.assign({}, DEFAULT_TEMPLATES, templates || {});
+    t.question = DEFAULT_TEMPLATES.question; t.finalQuestion = DEFAULT_TEMPLATES.finalQuestion;
+    t.answer = DEFAULT_TEMPLATES.answer; t.finalAnswer = DEFAULT_TEMPLATES.finalAnswer;
+    return t;
+  }
+  function questionCopy(n, total, text, templates) {
+    var t = fixedTemplates(templates);
     var isFinal = n === total;
-    return cleanForTTS(fill(isFinal ? t.finalQuestion : t.question, { n: n, question: cleanForTTS(text) }));
+    return fitComment(fill(isFinal ? t.finalQuestion : t.question, { n: n, question: cleanForTTS(text) }));
   }
 
   function answerCopy(n, total, answer, templates) {
-    var t = Object.assign({}, DEFAULT_TEMPLATES, templates || {});
+    var t = fixedTemplates(templates);
     var isFinal = n === total;
-    return cleanForTTS(fill(isFinal ? t.finalAnswer : t.answer, { answer: cleanForTTS(answer), next: n + 1 }));
+    return fitComment(fill(isFinal ? t.finalAnswer : t.answer, { answer: cleanForTTS(answer), next: n + 1 }));
   }
 
   function hintCopy(n, hint, templates) {
     var t = Object.assign({}, DEFAULT_TEMPLATES, templates || {});
-    return cleanForTTS(fill(t.hint, { n: n, hint: cleanForTTS(hint) }));
+    return fitComment(fill(t.hint, { n: n, hint: cleanForTTS(hint) }));
+  }
+
+  /* multiple-choice options as one comment: "Options for question 4: A, x. B, y. C, z. D, w." */
+  function optionsCopy(n, opts) {
+    var body = opts.map(function (x, i) { return 'ABCD'[i] + ', ' + cleanForTTS(x); }).join('. ') + '.';
+    var full = 'Options for question ' + n + ': ' + body;
+    return full.length <= COMMENT_MAX ? full : fitComment('Options: ' + body);
   }
 
   /* ---------- ranking (standard competition ranking: 1,1,3) ---------- */
@@ -440,7 +462,7 @@
     availablePoints: availablePoints, ordinal: ordinal,
     questionCopy: questionCopy, answerCopy: answerCopy, hintCopy: hintCopy,
     rankPlayers: rankPlayers, leaderboardCopy: leaderboardCopy, winnerCopy: winnerCopy,
-    newHostState: newHostState, parseGuess: parseGuess, tiebreakRound: tiebreakRound, pickTiebreaker: pickTiebreaker, joinNames: joinNames, cleanForTTS: cleanForTTS, awardPoints: awardPoints, adjustPoints: adjustPoints, removeAward: removeAward,
+    newHostState: newHostState, parseGuess: parseGuess, tiebreakRound: tiebreakRound, pickTiebreaker: pickTiebreaker, joinNames: joinNames, cleanForTTS: cleanForTTS, fitComment: fitComment, optionsCopy: optionsCopy, awardPoints: awardPoints, adjustPoints: adjustPoints, removeAward: removeAward,
     undoLast: undoLast, renamePlayer: renamePlayer, removePlayer: removePlayer,
     normalizeText: normalizeText, checkAnswer: checkAnswer,
     similarity: similarity, isNearDuplicate: isNearDuplicate, findDuplicates: findDuplicates,

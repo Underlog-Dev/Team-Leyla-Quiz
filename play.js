@@ -6,7 +6,13 @@
 
   function q() { return BY_ID[App.game.ids[App.game.index]]; }
   function fresh() { return { revealed: false, hint: false, answered: false, correct: null, pick: null, guess: '', close: false, options: null }; }
-  function points() { var g = App.game, c = g.cur; return Core.availablePoints(q().difficulty, c.hint, g.flat || 0); }
+  function isMc(g, c) { return g.format === 'mc' || !!c.mc; }
+  /* "Show multiple choice" on a medium/hard question drops it to 1 point */
+  function points() { var g = App.game, c = g.cur; return Core.availablePoints(q().difficulty, c.hint, c.mc ? 1 : (g.flat || 0)); }
+  function mcBtn(g, Q, cur) {
+    if (g.format === 'mc' || cur.mc || cur.answered || (Q.difficulty !== 'hard' && Q.difficulty !== 'medium')) return '';
+    return '<button class="btn" data-act="showmc">\uD83D\uDD20 Show multiple choice' + (g.flat ? '' : ' (1 pt)') + '</button>';
+  }
 
   /* ---------- start ---------- */
   App.actions.start = function () {
@@ -16,7 +22,7 @@
     var res = Core.buildQuiz(pool, { themes: [], difficulty: App.diffList(s) }, Math.min(want, 500), App.used);
     if (!res.questions.length) { App.toast('No unused questions left for these settings'); return; }
     App.game = {
-      mode: s.mode, format: s.format, difficulty: App.diffList(s), flat: s.pointsMode === 'flat' ? (s.flatPts || 1) : 0, timer: s.mode === 'solo' ? s.timer : 0,
+      mode: s.mode, format: s.format, difficulty: App.diffList(s), flat: s.pointsMode === 'flat' ? 1 : 0, timer: s.mode === 'solo' ? s.timer : 0,
       setup: JSON.parse(JSON.stringify(s)),
       ids: res.questions.map(function (x) { return x.id; }), total: res.questions.length, index: 0,
       rejected: [], finished: false, cur: fresh(), solo: { score: 0, correct: 0, log: [] }, host: Core.newHostState(), started: Date.now()
@@ -35,7 +41,7 @@
     App.setBackdrop(Q.theme, g.index);
     var nq = BY_ID[g.ids[g.index + 1]]; if (nq) App.preload(nq.theme, g.index + 1);
     var isHost = g.mode === 'host', pts = points(), last = g.index === g.total - 1;
-    if (g.format === 'mc' && !cur.options) cur.options = Core.mcOptions(Q);
+    if (isMc(g, cur) && !cur.options) cur.options = Core.mcOptions(Q);
     var head = '<div class="qhead"><span class="pill">' + (last ? 'Final question' : 'Question ' + (g.index + 1)) + ' of ' + g.total + '</span>' +
       '<span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' \u00B7 ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>';
     var body = isHost ? hostBody(Q, cur, last) : soloBody(Q, cur, last);
@@ -43,7 +49,7 @@
       (g.timer && !cur.answered ? '<div class="timer" id="timer"></div>' : '') +
       '<div class="qtext" id="qtext">' + esc(Q.question) + '</div>' + body + '</div>' +
       '<div class="minor"><button class="btn small" data-act="flag">\uD83D\uDEA9 Report wrong</button><button class="btn small" data-act="quit">Quit quiz</button></div></div></section>';
-    var extra = '<button class="icon-btn quit-btn" data-act="quit" aria-label="Quit quiz">\u2715 Quit</button><button class="icon-btn" data-act="fullscreen" aria-label="Fullscreen host mode">\u26F6</button>';
+    var extra = '<button class="icon-btn quit-btn" data-act="quit" aria-label="Quit quiz">\u2715 Quit</button>';
     var drawer = isHost ? '<aside class="drawer' + (App.lbOpen ? ' open' : '') + '" id="lb" aria-label="Leaderboard"><button class="drawer-tab" data-act="toggle-lb" aria-label="Show or hide leaderboard"><b>\uD83C\uDFC6</b><small>Leaders</small><span>\u25C0</span></button><div class="drawer-in">' + leaderboard() + '</div></aside>' : '';
     app.innerHTML = '<div class="v-play">' + App.hud(extra) + main + drawer + '</div>';
     if (g.timer && !cur.answered) startTick();
@@ -51,9 +57,12 @@
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   /* Answers & hints only appear in the DOM after the user chooses to reveal them. */
+  /* small round copy button */
+  function copyDot(act, label) { return '<button class="copydot" data-act="' + act + '" aria-label="' + label + '" title="' + label + '">\uD83D\uDCCB</button>'; }
+  function optionsHead() { return '<div class="optshead"><span class="help">Options</span>' + copyDot('copy-options', 'Copy options') + '</div>'; }
   function hintBlock(Q, cur, host) {
     if (!cur.hint) return '';
-    return '<div class="hintbox">💡 <b>Hint:</b> ' + esc(Q.hint) + '</div>';
+    return '<div class="hintbox">💡 <b>Hint:</b> ' + esc(Q.hint) + copyDot('copy-hint', 'Copy hint') + '</div>';
   }
   function answerBlock(Q) {
     return '<div class="answerbox revealed"><div class="help">Answer</div><div class="ans">' + esc(Q.answer) + '</div>' + (Q.explanation ? '<div class="help">' + esc(Q.explanation) + '</div>' : '') + '</div>';
@@ -66,16 +75,16 @@
   function hostBody(Q, cur, last) {
     var g = App.game;
     var opts = '';
-    if (g.format === 'mc') {
-      opts = '<div class="mc">' + cur.options.map(function (o, i) {
+    if (isMc(g, cur)) {
+      opts = optionsHead() + '<div class="mc">' + cur.options.map(function (o, i) {
         var cls = cur.revealed && Core.normalizeText(o) === Core.normalizeText(Q.answer) ? ' class="right"' : '';
         return '<button' + cls + ' disabled>' + 'ABCD'[i] + '. ' + esc(o) + '</button>';
-      }).join('') + '</div><button class="btn small" style="margin-top:8px" data-act="copy-options">Copy options</button>';
+      }).join('') + '</div>';
     }
     var tools = '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn" data-act="copy-q">📋 Copy question</button>' +
-      '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) +
+      '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + mcBtn(g, Q, cur) +
       '<button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button>' +
-      (cur.hint ? '<button class="btn" data-act="copy-hint">📋 Copy hint</button>' : '') + '</div>';
+      '</div>';
     var ans;
     if (!cur.revealed) ans = '<div class="answerbox"><div>🔒 <b>Answer hidden</b></div><button class="btn yellow big" style="margin-top:8px" data-act="reveal">👁 Reveal answer</button></div>';
     else ans = answerBlock(Q) + '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn primary" data-act="copy-a">📋 Copy answer</button></div>';
@@ -94,22 +103,22 @@
     var g = App.game, html = '';
     html += hintBlock(Q, cur);
     if (!cur.answered) {
-      if (g.format === 'mc') {
-        html += '<div class="mc">' + cur.options.map(function (o, i) { return '<button data-act="pick" data-i="' + i + '">' + 'ABCD'[i] + '. ' + esc(o) + '</button>'; }).join('') + '</div>';
+      if (isMc(g, cur)) {
+        html += optionsHead() + '<div class="mc">' + cur.options.map(function (o, i) { return '<button data-act="pick" data-i="' + i + '">' + 'ABCD'[i] + '. ' + esc(o) + '</button>'; }).join('') + '</div>';
       } else {
         html += '<div class="row" style="margin-top:10px"><input type="text" id="guess" class="grow" placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(cur.guess) + '" data-input="guess" data-enter="submit"><button class="btn primary" data-act="submit">Submit</button></div>';
         if (cur.close) html += '<div class="notice" style="margin-top:8px">So close! Does your answer match? <div class="row" style="margin-top:6px"><button class="btn small" data-act="accept-close">Yes, count it</button><button class="btn small" data-act="reject-close">No</button></div></div>';
       }
-      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="copy-q">📋 Copy question</button><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
+      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="copy-q">📋 Copy question</button><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + mcBtn(g, Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
     } else {
-      if (g.format === 'mc') {
-        html = hintBlock(Q, cur) + '<div class="mc">' + cur.options.map(function (o, i) {
+      if (isMc(g, cur)) {
+        html = hintBlock(Q, cur) + optionsHead() + '<div class="mc">' + cur.options.map(function (o, i) {
           var right = Core.normalizeText(o) === Core.normalizeText(Q.answer), cls = right ? 'right' : (cur.pick === i ? 'wrong' : '');
           return '<button disabled class="' + cls + '">' + 'ABCD'[i] + '. ' + esc(o) + '</button>';
         }).join('') + '</div>';
       }
       html += '<div class="feedback ' + (cur.correct ? 'ok sparkle' : 'bad') + '">' + (cur.correct ? '✨ Correct! +' + cur.earned + ' pt' + (cur.earned === 1 ? '' : 's') : (cur.timeout ? '⏱ Time’s up' : '❌ Not quite')) + '</div>';
-      if (g.format !== 'mc' || cur.correct === false) html += answerBlock(Q); else if (Q.explanation) html += '<div class="help">' + esc(Q.explanation) + '</div>';
+      if (!isMc(g, cur) || cur.correct === false) html += answerBlock(Q); else if (Q.explanation) html += '<div class="help">' + esc(Q.explanation) + '</div>';
       html += '<div class="help">Score: <b>' + g.solo.score + '</b></div><button class="btn primary big" style="margin-top:10px" data-act="next">' + (last ? 'See results 🏁' : 'Next question →') + '</button>';
     }
     return html;
@@ -158,6 +167,13 @@
     var g = App.game, c = g.cur; if (!c.hint) { c.hint = true; (g.hints = g.hints || {})[g.index] = 1; App.save(); }
     App.render();
   };
+  App.actions.showmc = function () {
+    var g = App.game, c = g.cur, Q = q();
+    if (g.format === 'mc' || c.mc || c.answered) return;
+    if (g.mode === 'host' && (g.host.awards[String(g.index)] || []).length) { App.toast('This question is already scored'); return; }
+    c.mc = true; c.options = Core.mcOptions(Q); (g.mcs = g.mcs || {})[g.index] = 1;
+    App.save(); App.render(); App.toast(g.flat ? 'Multiple choice shown' : 'Multiple choice shown - worth 1 point now');
+  };
   App.actions.reveal = function () {
     var c = App.game.cur; c.revealed = true; App.markUsed(q().id); App.save(); App.render();
     var b = document.querySelector('.answerbox'); if (b) b.classList.add('sparkle');
@@ -166,7 +182,7 @@
   App.actions['copy-a'] = function () { var g = App.game; if (!g.cur.revealed) return; App.copy(Core.answerCopy(g.index + 1, g.total, q().answer, App.templates), 'answer'); };
   App.actions['copy-hint'] = function () { var g = App.game; if (!g.cur.hint) return; App.copy(Core.hintCopy(g.index + 1, q().hint, App.templates), 'hint'); };
   App.actions['copy-options'] = function () {
-    var o = App.game.cur.options; App.copy('Options: ' + o.map(function (x, i) { return 'ABCD'[i] + ', ' + x; }).join('. ') + '.', 'options');
+    var o = App.game.cur.options; App.copy(Core.optionsCopy(App.game.index + 1, o), 'options');
   };
 
   App.actions.refresh = function () {
@@ -212,7 +228,7 @@
   };
   /* Host: go back a question to fix a wrongly typed name. Its scores stay; tap a scored name to take it back. */
   function showQuestion(i) {
-    var g = App.game; g.index = i; g.cur = fresh(); g.cur.revealed = true; g.cur.hint = !!(g.hints && g.hints[i]);
+    var g = App.game; g.index = i; g.cur = fresh(); g.cur.revealed = true; g.cur.hint = !!(g.hints && g.hints[i]); g.cur.mc = !!(g.mcs && g.mcs[i]);
     clearInterval(tick); App.resetScroll = true; App.save(); App.render();
   }
   App.actions.back = function () {
@@ -260,11 +276,6 @@
   App.actions.remove = function (el) { if (window.confirm('Remove this player?')) { Core.removePlayer(App.game.host, el.dataset.id); App.save(); App.render(); } };
   App.actions['copy-lb'] = function () { App.copy(Core.leaderboardCopy(App.game.host.players, App.templates), 'leaderboard'); };
   App.actions['toggle-lb'] = function () { var el = document.getElementById('lb'); if (!el) return; App.lbOpen = !el.classList.contains('open'); el.classList.toggle('open', App.lbOpen); };
-  App.actions.fullscreen = function () {
-    document.body.classList.toggle('fullscreen-host');
-    var d = document, de = d.documentElement;
-    try { if (!d.fullscreenElement && de.requestFullscreen) de.requestFullscreen(); else if (d.fullscreenElement && d.exitFullscreen) d.exitFullscreen(); } catch (e) {}
-  };
 
   /* ---------- results ---------- */
   function confetti() {
@@ -325,7 +336,9 @@
   App.actions['tb-finish'] = function () { var g = App.game; g.tb = null; App.view = 'results'; App.resetScroll = true; App.save(); App.render(); };
   App.actions['tb-copy-q'] = function () {
     var g = App.game, Q = tbQ(g), names = g.tb.ids.map(function (id) { return g.host.players.filter(function (x) { return x.id === id; })[0].name; });
-    App.copy(Core.cleanForTTS('Tiebreaker for first place between ' + Core.joinNames(names) + '! Closest answer wins. ' + Q.question), 'tiebreaker');
+    var full = 'Tiebreaker for first place between ' + Core.joinNames(names) + '! Closest answer wins. ' + Q.question;
+    if (full.length > 150) full = 'Tiebreaker! Closest answer wins. ' + Q.question;
+    App.copy(Core.fitComment(full), 'tiebreaker');
   };
   App.actions['tb-copy-r'] = function () {
     var g = App.game, tb = g.tb, Q = tbQ(g), r = tb.result, ans = fmtAns(Q);
@@ -333,7 +346,7 @@
     var txt = r.winners.length === 1
       ? 'The answer is ' + ans + '! Closest was ' + w[0].name + ' with ' + w[0].guess + '. ' + w[0].name + ' wins the tiebreaker!'
       : 'The answer is ' + ans + '! ' + Core.joinNames(w.map(function (x) { return x.name; })) + ' were equally close. Still a tie!';
-    App.copy(Core.cleanForTTS(txt), 'tiebreaker result');
+    App.copy(Core.fitComment(txt), 'tiebreaker result');
   };
   App.renderTiebreak = function (app) {
     var g = App.game, tb = g.tb, Q = tb && tbQ(g);

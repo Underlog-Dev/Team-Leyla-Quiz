@@ -229,8 +229,7 @@
         { v: 'medium', l: 'Medium' + (flat ? '' : ' 2pts'), cls: 'medium', on: dl.indexOf('medium') !== -1 },
         { v: 'hard', l: 'Hard' + (flat ? '' : ' 3pts'), cls: 'hard', on: dl.indexOf('hard') !== -1 },
         { v: 'all', l: 'Mixed (all)', cls: 'mixed', on: dl.length === 3 }], dl, 'diff') +
-      '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every question' }], s.pointsMode) +
-      (flat ? '<label class="lbl">Points per question</label>' + seg('flatPts', [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 5, l: '5' }], s.flatPts) : '') +
+      '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every question (1 pt)' }], s.pointsMode) +
       '<label class="lbl">Number of questions</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
       (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
@@ -350,8 +349,8 @@
     App.openModal('<h2>Settings</h2>' +
       '<label class="row"><input type="checkbox" id="s-calm"' + (App.settings.calm ? ' checked' : '') + ' style="width:22px;height:22px"> Calm mode (reduce motion)</label>' +
       '<label class="row" style="margin-top:8px"><input type="checkbox" id="s-edit"' + (App.settings.editBeforeCopy ? ' checked' : '') + ' style="width:22px;height:22px"> Show an edit box before copying</label>' +
-      '<h3 style="margin-top:16px">Copy templates</h3><p class="help">Use {n}, {question}, {answer}, {next}, {hint}. Keep them short and natural for text-to-speech.</p>' +
-      f('question', 'Question') + f('finalQuestion', 'Final question') + f('answer', 'Answer') + f('finalAnswer', 'Final answer') + f('hint', 'Hint') + f('leadIntro', 'Leaderboard intro') +
+      '<h3 style="margin-top:16px">Copy templates</h3><p class="help">Questions always read “Question X: …” and answers “CORRECT! The answer is … Onto question X”. Comments are kept within TikTok’s 150-character limit.</p>' +
+      f('hint', 'Hint') + f('leadIntro', 'Leaderboard intro') +
       '<div class="row" style="margin-top:12px"><button class="btn primary grow" data-act="save-settings">Save</button><button class="btn" data-act="reset-templates">Reset templates</button></div>');
   };
   App.actions['save-settings'] = function () {
