@@ -232,8 +232,20 @@
         a.points += p.score; a.games++; if (p.rank === 1 && p.score > 0) a.wins++;
       });
     } else entry.solo = { score: g.solo.score, correct: g.solo.correct };
-    App.hist.unshift(entry); App.hist = App.hist.slice(0, 30);
+    g.recEntry = entry; App.hist.unshift(entry); App.hist = App.hist.slice(0, 30);
     store.set('hist', App.hist); store.set('alltime', App.alltime);
+  };
+  /* undo a recorded result (used when the host goes back from the final screen to fix a name) */
+  App.unrecordGame = function (g) {
+    if (!g.recorded) return; var e = g.recEntry; g.recorded = false;
+    if (!e) return;
+    App.hist = App.hist.filter(function (x) { return x.t !== e.t; });
+    (e.players || []).forEach(function (p) {
+      var k = Core.normalizeText(p.name), a = App.alltime[k]; if (!a) return;
+      a.points -= p.score; a.games--; if (p.rank === 1 && p.score > 0) a.wins--;
+      if (a.games <= 0) delete App.alltime[k];
+    });
+    g.recEntry = null; store.set('hist', App.hist); store.set('alltime', App.alltime);
   };
   function renderLeader(app) {
     var body;

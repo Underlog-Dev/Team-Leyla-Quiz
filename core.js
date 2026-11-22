@@ -153,6 +153,22 @@
     return true;
   }
 
+  /* Take back one player's award for a question (fixing a wrong name). Returns true if something was removed. */
+  function removeAward(state, playerId, qIndex) {
+    var hi = -1;
+    for (var i = state.history.length - 1; i >= 0; i--) {
+      var h = state.history[i]; if (h.type === 'award' && h.playerId === playerId && h.qIndex === qIndex) { hi = i; break; }
+    }
+    var list = state.awards[String(qIndex)] || [], at = list.indexOf(playerId);
+    if (hi === -1 || at === -1) return false;
+    var h = state.history.splice(hi, 1)[0], pi = -1;
+    state.players.forEach(function (p, i) { if (p.id === playerId) pi = i; });
+    if (pi === -1) return false;
+    var p = state.players[pi]; p.score -= h.points; list.splice(at, 1);
+    if (h.created && p.score === 0 && !state.history.some(function (x) { return x.playerId === p.id; })) state.players.splice(pi, 1);
+    return true;
+  }
+
   function undoLast(state) {
     var h = state.history.pop();
     if (!h) return null;
@@ -394,7 +410,7 @@
     availablePoints: availablePoints, ordinal: ordinal,
     questionCopy: questionCopy, answerCopy: answerCopy, hintCopy: hintCopy,
     rankPlayers: rankPlayers, leaderboardCopy: leaderboardCopy, winnerCopy: winnerCopy,
-    newHostState: newHostState, awardPoints: awardPoints, adjustPoints: adjustPoints,
+    newHostState: newHostState, awardPoints: awardPoints, adjustPoints: adjustPoints, removeAward: removeAward,
     undoLast: undoLast, renamePlayer: renamePlayer, removePlayer: removePlayer,
     normalizeText: normalizeText, checkAnswer: checkAnswer,
     similarity: similarity, isNearDuplicate: isNearDuplicate, findDuplicates: findDuplicates,
