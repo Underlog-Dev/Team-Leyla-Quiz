@@ -311,7 +311,7 @@
     var quizQs = bank.filter(function (q) { return inQuiz[q.id]; });
     function ok(q) {
       if (used[q.id] || rej[q.id] || inQuiz[q.id] || q.id === current.id) return false;
-      if (q.difficulty !== current.difficulty) return false;
+      if (q.difficulty !== (ctx.difficulty || current.difficulty)) return false;
       if (ctx.themes && ctx.themes.length && ctx.themes.indexOf(q.theme) === -1) return false;
       return !quizQs.some(function (p) { return isNearDuplicate(p, q); });
     }

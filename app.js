@@ -101,18 +101,28 @@
   App.preload = function (key, variant) {
     var u = imgUrl(key, variant); if (preloaded[u]) return; preloaded[u] = 1; var i = new Image(); i.src = u;
   };
+  var bgToken = 0;
   App.setBackdrop = function (key, variant) {
     lastArgs = [key, variant];
     var th = THEMES[key] || THEMES.general, url = imgUrl(key, variant), sig = url;
     document.body.classList.toggle('pg-banner', !!BANNER[key]); document.body.setAttribute('data-theme', key);
     if (lastKey === sig) return; lastKey = sig;
-    var next = bgOn === 'bgA' ? 'bgB' : 'bgA';
-    var el = document.getElementById(next), old = document.getElementById(bgOn);
-    el.style.backgroundImage = 'url(' + url + '), linear-gradient(160deg,' + th.c1 + ',' + th.c2 + ')';
-    document.getElementById('bgblur').style.backgroundImage = 'url(' + url + ')';
-    App.preload(key, variant);
-    void el.offsetWidth; el.classList.add('on'); old.classList.remove('on'); bgOn = next;
+    var token = ++bgToken;
+    /* only swap once the picture has loaded, so you never see an empty background */
+    var done = false;
+    var show = function () {
+      if (done || token !== bgToken) return; done = true;
+      var next = bgOn === 'bgA' ? 'bgB' : 'bgA';
+      var el = document.getElementById(next), old = document.getElementById(bgOn);
+      el.style.backgroundImage = 'url(' + url + '), linear-gradient(160deg,' + th.c1 + ',' + th.c2 + ')';
+      document.getElementById('bgblur').style.backgroundImage = 'url(' + url + ')';
+      void el.offsetWidth; el.classList.add('on'); old.classList.remove('on'); bgOn = next;
+    };
+    var im = new Image(); im.onload = show; im.onerror = show; im.src = url;
+    if (im.complete) show();
   };
+  /* warm the cache with the page backgrounds so Home/Setup/Leaderboard appear instantly */
+  setTimeout(function () { ['home', 'setup', 'leader'].forEach(function (k) { App.preload(k); }); }, 1500);
 
   /* ---------- pools ---------- */
   App.poolBank = function (s) {
