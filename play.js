@@ -6,7 +6,8 @@
 
   function q() { return BY_ID[App.game.ids[App.game.index]]; }
   function fresh() { return { revealed: false, hint: false, answered: false, correct: null, pick: null, guess: '', close: false, options: null }; }
-  function points() { var c = App.game.cur; return Core.availablePoints(q().difficulty, c.hint); }
+  function flat() { return App.game.setup && App.game.setup.scaled === false; }
+  function points() { var c = App.game.cur; return flat() ? 1 : Core.availablePoints(q().difficulty, c.hint); }
 
   /* ---------- start ---------- */
   App.actions.start = function () {
@@ -74,7 +75,7 @@
     }
     var tools = '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn" data-act="copy-q">📋 Copy question</button>' +
       '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) +
-      '<button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button>' +
+      '<button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : flat() ? 'Hint' : 'Hint (-1 pt)') + '</button>' +
       (cur.hint ? '<button class="btn" data-act="copy-hint">📋 Copy hint</button>' : '') + '</div>';
     var ans;
     if (!cur.revealed) ans = '<div class="answerbox"><div>🔒 <b>Answer hidden</b></div><button class="btn yellow big" style="margin-top:8px" data-act="reveal">👁 Reveal answer</button></div>';
@@ -100,7 +101,7 @@
         html += '<div class="row" style="margin-top:10px"><input type="text" id="guess" class="grow" placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(cur.guess) + '" data-input="guess" data-enter="submit"><button class="btn primary" data-act="submit">Submit</button></div>';
         if (cur.close) html += '<div class="notice" style="margin-top:8px">So close! Does your answer match? <div class="row" style="margin-top:6px"><button class="btn small" data-act="accept-close">Yes, count it</button><button class="btn small" data-act="reject-close">No</button></div></div>';
       }
-      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
+      html += '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : flat() ? 'Hint' : 'Hint (-1 pt)') + '</button><button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '<button class="btn" data-act="giveup">Give up</button></div>';
     } else {
       if (g.format === 'mc') {
         html = hintBlock(Q, cur) + '<div class="mc">' + cur.options.map(function (o, i) {
@@ -288,7 +289,7 @@
       }).join('') : '<p>No points were awarded.</p>') +
         '<div class="row" style="margin-top:.8em;justify-content:center"><button class="btn primary" data-act="copy-lb">\uD83D\uDCCB Copy top three</button><button class="btn yellow" data-act="copy-winner">\uD83D\uDCCB Copy winner</button></div>';
     } else {
-      var max = g.solo.log.reduce(function (a, l) { return a + Core.BASE_POINTS[BY_ID[l.id].difficulty]; }, 0);
+      var max = g.solo.log.reduce(function (a, l) { return a + (flat() ? 1 : Core.BASE_POINTS[BY_ID[l.id].difficulty]); }, 0);
       body = '<h2>\uD83C\uDF89 Quiz complete!</h2><div class="big-score">' + g.solo.score + ' pt' + (g.solo.score === 1 ? '' : 's') + '</div><p>' + g.solo.correct + ' of ' + g.total + ' correct \u00B7 best possible ' + max + '</p>' +
         '<div style="max-height:30vh;overflow:auto;text-align:left">' + g.solo.log.map(function (l) { var Q = BY_ID[l.id]; return '<div class="lb-item"><span>' + (l.correct ? '\u2705' : '\u274C') + '</span><span class="lb-name">' + esc(Q.question) + '</span><span class="lb-score">' + l.earned + '</span></div>'; }).join('') + '</div>';
     }
