@@ -366,6 +366,17 @@
     }
   });
 
+  /* Update 10: lock the page. Blocks pinch zoom (iPhone ignores user-scalable=no for pinches),
+     and when the keyboard closes snaps the page back to the left edge so nothing sits off centre. */
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false }); });
+  document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  App.recentre = function (top) {
+    window.scrollTo(0, top ? 0 : window.scrollY);
+    document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0;
+  };
+  document.addEventListener('focusout', function () { setTimeout(function () { if (!document.activeElement || !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) App.recentre(false); }, 60); });
+  window.addEventListener('scroll', function () { if (window.scrollX) window.scrollTo(0, window.scrollY); }, { passive: true });
+
   document.addEventListener('DOMContentLoaded', function () {
     if (App.game && !BY_ID[App.game.ids[App.game.index]]) App.game = null;
     App.view = 'home';

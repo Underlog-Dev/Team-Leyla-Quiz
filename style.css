@@ -202,3 +202,7 @@ table.stats td,table.stats th{padding:6px;border-bottom:1px solid var(--purple-l
 
 /* iPhone Safari zooms into text boxes smaller than 16px (the winner's name box), and stays zoomed. Keep them 16px+. */
 input[type=text],input[type=number],textarea,select{font-size:max(16px,1em)}
+
+/* Update 10: page locked - no zoom, no sideways slide */
+html,body{width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,input,textarea,select,a{touch-action:manipulation}
