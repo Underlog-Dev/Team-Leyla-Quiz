@@ -222,8 +222,7 @@
     if (avail === 0) msg = '<span class="notice warn">No unused questions left for these settings.</span>';
     else if (avail < want) msg = '<span class="notice">Only ' + avail + ' unused questions match.</span>';
     else msg = '<span class="help">' + avail + ' questions available</span>';
-    app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' +
-      '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
+    var cols = '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
       '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label>' + multi([
         { v: 'easy', l: 'Easy' + (flat ? '' : ' 1pt'), cls: 'easy', on: dl.indexOf('easy') !== -1 },
@@ -235,8 +234,11 @@
       (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
       (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
       '</div><div class="col"><label class="lbl">Themes <span class="help">(pick several, or none for all)</span></label><div class="seg">' + themeChips + '</div>' +
-      (subHtml ? '<details style="margin-top:.5em"><summary class="help">Narrow by subcategory (optional)</summary>' + subHtml + '</details>' : '') + '</div></div>' +
-      '</section></div><div class="setup-actions">' + msg + '<button class="btn primary" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button></div></div>';
+      (subHtml ? '<details style="margin-top:.5em"><summary class="help">Narrow by subcategory (optional)</summary>' + subHtml + '</details>' : '') + '</div></div>';
+    var startBtn = '<button class="btn primary" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button>';
+    if (s.mode === 'stream') { App.renderStreamLobby(app, s, cols, msg, startBtn, dl, want); return; }
+    app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' + cols +
+      '</section></div><div class="setup-actions">' + msg + startBtn + '</div></div>';
   }
 
   /* ---------- leaderboard page ---------- */

@@ -88,6 +88,63 @@
     var inp = document.getElementById('award-name'); if (inp && typed) inp.value = typed;
     fitStream();
   }
+  function streamLayout(app, box, ctl) {
+    document.body.classList.add('streamer');
+    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">\uD83D\uDCFA Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+  }
+  function streamHead(left, sub1, sub2) {
+    return '<div class="sb-head"><span>\uD83D\uDC23 Team Leyla Quiz</span><span>' + left + '</span></div><div class="sb-sub"><span>' + sub1 + '</span><span>' + sub2 + '</span></div>';
+  }
+
+  /* Streamer Mode game selection: viewers see the themes inside the box, Leyla picks with the private form below/beside it */
+  App.renderStreamLobby = function (app, s, cols, msg, startBtn, dl, want) {
+    var ORD = window.THEME_ORDER, all = !s.themes.length;
+    var chips = ORD.map(function (k) {
+      var on = all || s.themes.indexOf(k) !== -1, T = THEMES[k];
+      return '<div class="sb-theme' + (on ? ' on' : '') + '"><span>' + T.icon + '</span><span class="t">' + esc(T.label) + '</span></div>';
+    }).join('');
+    var flat = s.pointsMode === 'flat';
+    var sum = [['Difficulty', dl.length === 3 ? 'Mixed' : dl.map(cap).join(' + ')], ['Questions', String(want || '')], ['Answers', s.format === 'mc' ? 'Multiple choice' : 'Open answer'], ['Points', flat ? '1 point each' : 'Harder = more']]
+      .map(function (r) { return '<div class="sb-sumrow"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
+    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Game selection', '🎮 Next game', all ? 'All themes' : s.themes.length + ' theme' + (s.themes.length === 1 ? '' : 's')) +
+      '<div class="sb-body"><div class="sb-status">Pick a theme! 🎯</div><div class="sb-themes">' + chips + '</div><div class="sb-sum">' + sum + '</div></div></div></div>';
+    var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><button class="btn small" data-act="go-home">🏠 Home</button><span class="pill">🎮 Game selection</span><span class="grow"></span></div>' +
+      '<div class="sc-start">' + msg + startBtn + '</div><div class="setup-grid sc-form">' + cols.replace(/<\/div>$/, '') + '</div></div>';
+    streamLayout(app, box, ctl);
+  };
+  /* End of quiz: the final leaderboard appears inside the capture box */
+  function renderStreamEnd(app, g) {
+    var ranked = Core.rankPlayers(g.host.players), medal = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
+    var top = ranked.filter(function (p) { return p.rank === 1 && p.score > 0; });
+    var status = !ranked.length || !ranked[0].score ? 'Thanks for playing!' : top.length > 1 ? '\uD83E\uDD1D Tie for first: ' + esc(Core.joinNames(top.map(function (p) { return p.name; }))) : '\uD83C\uDFC6 ' + esc(top[0].name) + ' wins!';
+    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Final results', '\uD83C\uDFC1 ' + g.total + ' questions', 'Quiz complete') +
+      '<div class="sb-body"><div class="sb-status">' + status + '</div><div class="sb-board">' +
+      (ranked.length ? ranked.slice(0, 8).map(function (p) { return '<div class="sb-row' + (p.rank === 1 && p.score > 0 ? ' first' : '') + '"><b>' + (medal[p.rank] || p.rank) + '</b><span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + ' pts</span></div>'; }).join('') : '<div class="sb-row"><span class="n">No points awarded</span></div>') +
+      '</div></div></div></div>';
+    var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">\uD83C\uDFC1 Quiz finished</span><span class="grow"></span></div>' +
+      '<button class="btn primary big sc-again" data-act="again">\uD83D\uDD01 Play again \u2013 back to game selection</button>' + tieBanner(g) +
+      '<div class="row sc-tools" style="margin-top:12px"><button class="btn" data-act="back-last">\u21A9 Back to last question</button><button class="btn" data-act="home">Change settings</button></div>' +
+      '<div class="sc-lb">' + leaderboard() + '</div></div>';
+    streamLayout(app, box, ctl);
+  }
+  /* Tiebreaker: question, tied names and (after the reveal) the result are shown inside the box */
+  function renderStreamTie(app, g, tb, Q, th, inner, byId) {
+    var r = tb.revealed ? tb.result : null;
+    var names = tb.ids.map(function (id) { return esc(byId(id).name); }).join(' \u00B7 ');
+    var rows = r ? '<div class="sb-hint"><b>Answer</b> ' + esc(fmtAns(Q)) + '</div><div class="sb-board">' + r.rows.map(function (x) {
+      var win = r.winners.indexOf(x.id) !== -1;
+      return '<div class="sb-row' + (win ? ' first' : '') + '"><b>' + (win ? '\uD83D\uDC51' : '') + '</b><span class="n">' + esc(x.name) + '</span><span class="s">' + (x.diff === null ? '\u2013' : esc(String(x.guess))) + '</span></div>'; }).join('') + '</div>' +
+      '<div class="sb-status">' + (r.winners.length === 1 ? '\uD83C\uDFC6 ' + esc(byId(r.winners[0]).name) + ' wins!' : '\uD83E\uDD1D Still tied!') + '</div>' : '<div class="sb-hint"><b>Closest number wins</b> ' + names + '</div>';
+    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : ''), th.icon + ' ' + esc(th.label), '\uD83E\uDD1D Tied: ' + tb.ids.length) +
+      '<div class="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' + rows + '</div></div></div>';
+    var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">\uD83E\uDD1D Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="grow"></span></div>' +
+      (r ? '' : '<div class="sc-ans"><div class="help">\uD83D\uDD12 Private answer \u2013 not shown on stream until you reveal</div><div class="ans">' + esc(fmtAns(Q)) + '</div></div>') +
+      '<div class="sc-tb">' + inner + '</div></div>';
+    var keepVals = {}; [].forEach.call(document.querySelectorAll('.tb-in'), function (e) { keepVals[e.dataset.id] = e.value; });
+    streamLayout(app, box, ctl);
+    [].forEach.call(document.querySelectorAll('.tb-in'), function (e) { if (keepVals[e.dataset.id] && !e.value) e.value = keepVals[e.dataset.id]; });
+    fitStream();
+  }
   /* Shrinks the question (and the hint/options that scale with it) until everything fits inside the fixed box. */
   function fitStream() {
     var box = document.getElementById('sbox'), qw = document.querySelector('.sb-qwrap'), body = document.getElementById('sb-body');
@@ -291,7 +348,8 @@
   };
   App.actions.quit = function () {
     if (!window.confirm('Quit this quiz? Your progress will be discarded (played questions stay marked as played).')) return;
-    clearInterval(tick); App.game = null; App.lbOpen = false; App.view = 'home'; App.save(); App.render();
+    var wasStream = !!(App.game && App.game.stream);
+    clearInterval(tick); App.game = null; App.lbOpen = false; App.view = wasStream ? 'setup' : 'home'; if (wasStream) App.setup.mode = 'stream'; App.save(); App.render();
   };
 
   /* ---------- host: scoring & leaderboard ---------- */
@@ -417,6 +475,7 @@
         '<div class="row" style="margin-top:.6em"><button class="btn" data-act="tb-copy-r">\uD83D\uDCCB Copy result</button>' +
         (r.winners.length === 1 ? '<button class="btn primary grow" data-act="tb-finish">See final leaderboard \u2192</button>' : '<button class="btn primary grow" data-act="tb-again">\u26A1 Another tiebreaker</button><button class="btn" data-act="tb-finish">Keep joint win</button>') + '</div>';
     }
+    if (g.stream) { renderStreamTie(app, g, tb, Q, th, inner, byId); return; }
     app.innerHTML = '<div class="v-play">' + App.hud() + '<div class="zone"><div class="qwrap"><div class="qcard"><div class="qhead"><span class="pill">\uD83E\uDD1D Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">Closest wins</span></div>' +
       '<h2 class="qtext" id="qtext">' + esc(Q.question) + '</h2>' + inner + '</div></div></div></div>';
   };
@@ -424,6 +483,7 @@
     var g = App.game; clearInterval(tick);
     App.setBackdrop((BY_ID[g.ids[g.total - 1]] || {}).theme || 'general', g.total - 1);
     App.recordGame(g);
+    if (g.stream) { renderStreamEnd(app, g); return; }
     var body;
     if (g.mode === 'host') {
       var ranked = Core.rankPlayers(g.host.players), medal = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
@@ -444,5 +504,8 @@
   App.actions['copy-winner'] = function () { App.copy(Core.winnerCopy(App.game.host.players, App.templates), 'winner'); };
   function startFresh() { App.game = null; App.lbOpen = false; App.view = 'setup'; App.save(); }
   App.actions.home = function () { startFresh(); App.render(); };
-  App.actions.again = function () { var s = App.game ? App.game.setup : App.setup; App.setup = Object.assign({}, App.setup, s); startFresh(); App.actions.start(); };
+  App.actions.again = function () {
+    var s = App.game ? App.game.setup : App.setup; App.setup = Object.assign({}, App.setup, s); var stream = !!(App.game && App.game.stream); startFresh();
+    if (stream) { App.setup.mode = 'stream'; App.save(); App.resetScroll = true; App.render(); } else App.actions.start();
+  };
 })();
