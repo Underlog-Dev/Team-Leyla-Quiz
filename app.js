@@ -148,7 +148,7 @@
   };
   App.topbar = App.hud;
 
-  var SCROLLERS = '.zone, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
+  var SCROLLERS = '.zone, .sctl, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
   App.render = function () {
     var app = document.getElementById('app');
     /* keep scroll positions when a click only refreshes the same screen */
@@ -167,6 +167,7 @@
     var app = document.getElementById('app');
     document.body.classList.toggle('calm', !!App.settings.calm);
     var v = App.view;
+    document.body.classList.remove('streamer');
     if ((v === 'play' || v === 'results') && !App.game) v = App.view = 'home';
     if (v === 'play') App.renderPlay(app);
     else if (v === 'results') App.renderResults(app);
@@ -222,7 +223,7 @@
     else if (avail < want) msg = '<span class="notice">Only ' + avail + ' unused questions match.</span>';
     else msg = '<span class="help">' + avail + ' questions available</span>';
     app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' +
-      '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }], s.mode) +
+      '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
       '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label>' + multi([
         { v: 'easy', l: 'Easy' + (flat ? '' : ' 1pt'), cls: 'easy', on: dl.indexOf('easy') !== -1 },

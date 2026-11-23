@@ -22,7 +22,7 @@
     var res = Core.buildQuiz(pool, { themes: [], difficulty: App.diffList(s) }, Math.min(want, 500), App.used);
     if (!res.questions.length) { App.toast('No unused questions left for these settings'); return; }
     App.game = {
-      mode: s.mode, format: s.format, difficulty: App.diffList(s), flat: s.pointsMode === 'flat' ? 1 : 0, timer: s.mode === 'solo' ? s.timer : 0,
+      mode: s.mode === 'stream' ? 'host' : s.mode, stream: s.mode === 'stream', format: s.format, difficulty: App.diffList(s), flat: s.pointsMode === 'flat' ? 1 : 0, timer: s.mode === 'solo' ? s.timer : 0,
       setup: JSON.parse(JSON.stringify(s)),
       ids: res.questions.map(function (x) { return x.id; }), total: res.questions.length, index: 0,
       rejected: [], finished: false, cur: fresh(), solo: { score: 0, correct: 0, log: [] }, host: Core.newHostState(), started: Date.now()
@@ -40,6 +40,7 @@
     clearInterval(tick);
     App.setBackdrop(Q.theme, g.index);
     var nq = BY_ID[g.ids[g.index + 1]]; if (nq) App.preload(nq.theme, g.index + 1);
+    if (g.stream) { renderStream(app, Q, th); return; }
     var isHost = g.mode === 'host', pts = points(), last = g.index === g.total - 1;
     if (isMc(g, cur) && !cur.options) cur.options = Core.mcOptions(Q);
     var head = '<div class="qhead"><span class="pill">' + (last ? 'Final question' : 'Question ' + (g.index + 1)) + ' of ' + g.total + '</span>' +
@@ -54,6 +55,51 @@
     app.innerHTML = '<div class="v-play">' + App.hud(extra) + main + drawer + '</div>';
     if (g.timer && !cur.answered) startTick();
   };
+
+  /* ---------- Streamer Mode: fixed capture box (public) + private controls ---------- */
+  function renderStream(app, Q, th) {
+    var g = App.game, cur = g.cur, pts = points(), last = g.index === g.total - 1;
+    var keep = document.getElementById('award-name'), typed = keep ? keep.value : '';
+    var mcOn = isMc(g, cur);
+    if (mcOn && !cur.options) cur.options = Core.mcOptions(Q);
+    /* ---- PUBLIC: nothing but question, hint and options is ever rendered in here ---- */
+    var box = '<div class="sbox" id="sbox"><div class="sb-in"><div class="sb-head"><span>🐣 Team Leyla Quiz</span><span>Question ' + (g.index + 1) + ' of ' + g.total + '</span></div>' +
+      '<div class="sb-sub"><span>' + th.icon + ' ' + esc(th.label) + '</span><span>' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>' +
+      '<div class="sb-body" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
+      (cur.hint ? '<div class="sb-hint"><b>💡 Hint</b> ' + esc(Core.safeHint(Q)) + '</div>' : '') +
+      (mcOn ? '<div class="sb-opts">' + cur.options.map(function (o, i) { return '<div class="sb-opt"><b>' + 'ABCD'[i] + '</b><span>' + esc(o) + '</span></div>'; }).join('') + '</div>' : '') +
+      '</div></div></div>';
+    /* ---- PRIVATE ---- */
+    var answers = (Q.acceptedAnswers || []).filter(function (a) { return Core.normalizeText(a) !== Core.normalizeText(Q.answer); }).slice(0, 4);
+    var ctl = '<div class="sctl" id="sctl">' +
+      '<div class="sc-top"><span class="pill">' + (last ? 'Final question' : 'Question ' + (g.index + 1)) + ' of ' + g.total + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span>' +
+      '<span class="grow"></span><button class="btn small" data-act="flag">🚩 Report wrong</button><button class="btn small" data-act="quit">✕ Quit</button></div>' +
+      '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream</div><div class="ans">' + esc(Q.answer) + '</div>' +
+      (answers.length ? '<div class="help">Also accepted: ' + esc(answers.join(' · ')) + '</div>' : '') + (Q.explanation ? '<div class="help">' + esc(Q.explanation) + '</div>' : '') + '</div>' +
+      '<div class="row sc-tools"><button class="btn' + (cur.hint ? ' on' : '') + '" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Show hint (-1 pt)') + '</button>' +
+      (mcOn ? '<button class="btn on" disabled>🔠 Choices shown</button>' : (cur.answered ? '' : '<button class="btn" data-act="showmc">\uD83D\uDD20 Show multiple choice' + (g.flat ? '' : ' (1 pt)') + '</button>')) +
+      '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '</div>' +
+      '<div class="row" style="margin-top:10px"><input type="text" id="award-name" placeholder="Winner’s name (+' + pts + ' on Next)" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"></div>' + awardedChips() +
+      '<div class="row sc-nav">' + (g.index > 0 ? '<button class="btn big" style="flex:0 0 auto" data-act="back">← Back</button>' : '') +
+      '<button class="btn primary big grow" data-act="next">' + (last ? 'Finish quiz 🏁' : 'Next question →') + '</button></div>' +
+      '<div class="sc-lb">' + leaderboard() + '</div></div>';
+    document.body.classList.add('streamer');
+    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">📺 Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+    var inp = document.getElementById('award-name'); if (inp && typed) inp.value = typed;
+    fitStream();
+  }
+  /* Shrinks the question (and the hint/options that scale with it) until everything fits inside the fixed box. */
+  function fitStream() {
+    var box = document.getElementById('sbox'), qw = document.querySelector('.sb-qwrap'), body = document.getElementById('sb-body');
+    if (!box || !qw || !body) return;
+    var fs = 9.4;
+    for (; fs >= 2.6; fs -= 0.2) {
+      box.style.setProperty('--qfs', fs.toFixed(1) + 'cqw');
+      var q = document.getElementById('sb-q');
+      if (qw.scrollHeight <= qw.clientHeight + 1 && q.scrollHeight <= qw.clientHeight + 1 && body.scrollHeight <= body.clientHeight + 1) break;
+    }
+  }
+  App.fitStream = fitStream;
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   /* Answers & hints only appear in the DOM after the user chooses to reveal them. */

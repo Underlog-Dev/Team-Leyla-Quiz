@@ -432,6 +432,27 @@
     return errs;
   }
 
+  /* ---------- streamer mode: a hint must never give the answer away ---------- */
+  var HINT_SKIP = { the: 1, and: 1, for: 1, of: 1, de: 1, la: 1, von: 1, van: 1 };
+  function answerTokens(q) {
+    var out = [];
+    [q.answer].concat(q.acceptedAnswers || []).forEach(function (a) {
+      normalizeText(a).split(' ').forEach(function (w) { if (w.length >= 3 && !HINT_SKIP[w] && out.indexOf(w) < 0) out.push(w); });
+    });
+    return out;
+  }
+  function hintLeaks(q) {
+    if (!q.hint) return false;
+    var words = ' ' + normalizeText(q.hint) + ' ';
+    return answerTokens(q).some(function (w) { return words.indexOf(' ' + w + ' ') >= 0; });
+  }
+  /* returns the hint text that is safe to broadcast */
+  function safeHint(q) {
+    if (q.hint && !hintLeaks(q)) return q.hint;
+    var a = String(q.answer).trim(), letters = a.replace(/[^A-Za-z0-9]/g, '').length, words = a.split(/\s+/).length;
+    return 'Starts with “' + a.charAt(0).toUpperCase() + '” (' + letters + ' letters' + (words > 1 ? ', ' + words + ' words' : '') + ')';
+  }
+
   /* ---------- multiple choice ---------- */
   function mcOptions(q, rng) { return shuffle([q.answer].concat(q.wrongOptions), rng); }
 
@@ -468,7 +489,7 @@
     similarity: similarity, isNearDuplicate: isNearDuplicate, findDuplicates: findDuplicates,
     shuffle: shuffle, availableQuestions: availableQuestions, buildQuiz: buildQuiz,
     findReplacement: findReplacement, bankStats: bankStats,
-    validateQuestion: validateQuestion, mcOptions: mcOptions,
+    validateQuestion: validateQuestion, safeHint: safeHint, hintLeaks: hintLeaks, mcOptions: mcOptions,
     makeStore: makeStore, memoryStorage: memoryStorage
   };
 });
