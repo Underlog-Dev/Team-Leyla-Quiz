@@ -56,6 +56,12 @@
     if (g.timer && !cur.answered) startTick();
   };
 
+  /* the answer, shown to viewers ONLY after Leyla presses Enter on a winner (or Reveal answer) */
+  function revealBlock(g, Q) {
+    var ids = g.host.awards[String(g.index)] || [], names = ids.map(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; return p ? p.name : ''; }).filter(Boolean);
+    return '<div class="sb-reveal"><b>\u2705 Answer</b> ' + esc(Q.answer) + (names.length ? '<span class="sb-win">\uD83C\uDFC6 ' + esc(Core.joinNames(names)) + '</span>' : '') + '</div>';
+  }
+  App.actions.unreveal = function () { App.game.cur.revealed = false; App.save(); App.render(); };
   /* ---------- Streamer Mode: fixed capture box (public) + private controls ---------- */
   function renderStream(app, Q, th) {
     var g = App.game, cur = g.cur, pts = points(), last = g.index === g.total - 1;
@@ -67,6 +73,7 @@
       '<div class="sb-sub"><span>' + th.icon + ' ' + esc(th.label) + '</span><span>' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>' +
       '<div class="sb-body" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
       (cur.hint ? '<div class="sb-hint"><b>💡 Hint</b> ' + esc(Core.safeHint(Q)) + '</div>' : '') +
+      (cur.revealed ? revealBlock(g, Q) : '') +
       (mcOn ? '<div class="sb-opts">' + cur.options.map(function (o, i) { return '<div class="sb-opt"><b>' + 'ABCD'[i] + '</b><span>' + esc(o) + '</span></div>'; }).join('') + '</div>' : '') +
       '</div></div></div>';
     /* ---- PRIVATE ---- */
@@ -79,8 +86,9 @@
       '<div class="row sc-tools"><button class="btn' + (cur.hint ? ' on' : '') + '" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Show hint (-1 pt)') + '</button>' +
       (mcOn ? '<button class="btn on" disabled>🔠 Choices shown</button>' : (cur.answered ? '' : '<button class="btn" data-act="showmc">\uD83D\uDD20 Show multiple choice' + (g.flat ? '' : ' (1 pt)') + '</button>')) +
       '<button class="btn" data-act="refresh">🔄 Refresh</button>' + easierBtn(Q, cur) + '</div>' +
-      '<div class="row" style="margin-top:10px"><input type="text" id="award-name" placeholder="Winner’s name (+' + pts + ' on Next)" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"></div>' + awardedChips() +
-      '<div class="row sc-nav">' + (g.index > 0 ? '<button class="btn big" style="flex:0 0 auto" data-act="back">← Back</button>' : '') +
+      '<div class="row" style="margin-top:10px"><input type="text" id="award-name" placeholder="Winner’s name – press Enter to show the answer (+' + pts + ')" autocomplete="off" autocapitalize="words" data-enter="award" class="grow"></div>' + awardedChips() +
+      '<div class="row" style="margin-top:8px">' + (cur.revealed ? '<button class="btn" data-act="unreveal">🙈 Hide answer from stream</button>' : '<button class="btn yellow" data-act="award">✅ Show answer (uses name above)</button>') + '</div>' +
+      '<div class="row sc-nav"><button class="btn big" style="flex:0 0 auto"' + (g.index > 0 ? ' data-act="back"' : ' disabled') + '>← Back</button>' +
       '<button class="btn primary big grow" data-act="next">' + (last ? 'Finish quiz 🏁' : 'Next question →') + '</button></div>' +
       '<div class="sc-lb">' + leaderboard() + '</div></div>';
     document.body.classList.add('streamer');
@@ -331,7 +339,7 @@
   };
   /* Host: go back a question to fix a wrongly typed name. Its scores stay; tap a scored name to take it back. */
   function showQuestion(i) {
-    var g = App.game; g.index = i; g.cur = fresh(); g.cur.revealed = true; g.cur.hint = !!(g.hints && g.hints[i]); g.cur.mc = !!(g.mcs && g.mcs[i]);
+    var g = App.game; g.index = i; g.cur = fresh(); g.cur.revealed = !g.stream; g.cur.hint = !!(g.hints && g.hints[i]); g.cur.mc = !!(g.mcs && g.mcs[i]);
     clearInterval(tick); App.resetScroll = true; App.save(); App.render();
   }
   App.actions.back = function () {
@@ -355,8 +363,10 @@
   /* ---------- host: scoring & leaderboard ---------- */
   App.actions.award = function () {
     var g = App.game, inp = document.getElementById('award-name'), name = inp ? inp.value : '';
+    if (g.stream && !name.trim()) { g.cur.revealed = true; App.markUsed(q().id); App.save(); App.render(); App.toast('Answer shown on stream'); return; }
     var r = Core.awardPoints(g.host, name, g.index, points());
-    if (!r.ok) { App.toast(r.reason === 'duplicate' ? r.player.name + ' already scored this question' : 'Type a name first'); return; }
+    if (!r.ok) { if (g.stream && r.reason === 'duplicate') { g.cur.revealed = true; App.save(); App.render(); } App.toast(r.reason === 'duplicate' ? r.player.name + ' already scored this question' : 'Type a name first'); return; }
+    if (g.stream) { g.cur.revealed = true; App.markUsed(q().id); }
     App.save(); App.render();
     App.toast('+' + r.points + ' ' + r.player.name + (r.created ? ' (new player)' : ''));
   };

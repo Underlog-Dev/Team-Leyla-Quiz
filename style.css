@@ -261,3 +261,9 @@ body.streamer.streamer #app{position:static;inset:auto;max-width:none;margin:0;p
 .sc-form .col{margin-bottom:12px;width:auto !important;max-width:none !important}
 .sc-again{width:100%;margin-top:10px}
 .v-stream .lbl{color:#ffd93d}
+
+.sb-reveal{flex:0 0 auto;font-size:calc(var(--qfs) * .7);line-height:1.15;font-weight:900;padding:2cqw 3cqw;border-radius:3cqw;background:rgba(46,204,113,.28);border:.6cqw solid #2ecc71;color:#fff;text-align:center}
+.sb-reveal b{display:block;font-size:.62em;color:#7dffb0;margin-bottom:.4cqw}
+.sb-win{display:block;font-size:.62em;color:#ffd93d;margin-top:.8cqw}
+.sc-nav .btn{width:auto;flex:0 0 auto}.sc-nav .btn.grow{flex:1 1 auto}
+.sc-nav .btn[disabled]{opacity:.45}
