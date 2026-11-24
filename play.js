@@ -69,7 +69,7 @@
     var mcOn = isMc(g, cur);
     if (mcOn && !cur.options) cur.options = Core.mcOptions(Q);
     /* ---- PUBLIC: nothing but question, hint and options is ever rendered in here ---- */
-    var box = '<div class="sbox" id="sbox"><div class="sb-in"><div class="sb-head"><span>🐣 Team Leyla Quiz</span><span>Question ' + (g.index + 1) + ' of ' + g.total + '</span></div>' +
+    var box = sboxOpen(Q.theme) + '<div class="sb-head"><span>🐣 Team Leyla Quiz</span><span>Question ' + (g.index + 1) + ' of ' + g.total + '</span></div>' +
       '<div class="sb-sub"><span>' + th.icon + ' ' + esc(th.label) + '</span><span>' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>' +
       '<div class="sb-body" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
       (cur.hint ? '<div class="sb-hint"><b>💡 Hint</b> ' + esc(Core.safeHint(Q)) + '</div>' : '') +
@@ -96,6 +96,8 @@
     var inp = document.getElementById('award-name'); if (inp && typed) inp.value = typed;
     fitStream();
   }
+  /* opens the capture box with the same portrait artwork the mobile layout uses */
+  function sboxOpen(key) { return '<div class="sbox' + (key === 'setup' || key === 'leader' ? ' framed' : '') + '" id="sbox" style="background-image:url(\'' + App.tallImg(key) + '\')"><div class="sb-in">'; }
   function streamLayout(app, box, ctl) {
     document.body.classList.add('streamer');
     app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">\uD83D\uDCFA Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
@@ -112,9 +114,8 @@
       return '<div class="sb-theme' + (on ? ' on' : '') + '"><span>' + T.icon + '</span><span class="t">' + esc(T.label) + '</span></div>';
     }).join('');
     var flat = s.pointsMode === 'flat';
-    var sum = [['Difficulty', dl.length === 3 ? 'Mixed' : dl.map(cap).join(' + ')], ['Questions', String(want || '')], ['Answers', s.format === 'mc' ? 'Multiple choice' : 'Open answer'], ['Points', flat ? '1 point each' : 'Harder = more']]
-      .map(function (r) { return '<div class="sb-sumrow"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
-    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Game selection', '🎮 Next game', all ? 'All themes' : s.themes.length + ' theme' + (s.themes.length === 1 ? '' : 's')) +
+    var sum = '<div class="sb-sumrow"><span>' + (dl.length === 3 ? 'Mixed' : dl.map(cap).join(' + ')) + ' \u00B7 ' + esc(String(want || '')) + ' questions</span><b>' + (s.format === 'mc' ? 'Multiple choice' : 'Open answer') + '</b></div>';
+    var box = sboxOpen('setup') + streamHead('Game selection', '🎮 Next game', all ? 'All themes' : s.themes.length + ' theme' + (s.themes.length === 1 ? '' : 's')) +
       '<div class="sb-body"><div class="sb-status">Pick a theme! 🎯</div><div class="sb-themes">' + chips + '</div><div class="sb-sum">' + sum + '</div></div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><button class="btn small" data-act="go-home">🏠 Home</button><span class="pill">🎮 Game selection</span><span class="grow"></span></div>' +
       '<div class="sc-start">' + msg + startBtn + '</div><div class="setup-grid sc-form">' + cols.replace(/<\/div>$/, '') + '</div></div>';
@@ -125,9 +126,9 @@
     var ranked = Core.rankPlayers(g.host.players), medal = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
     var top = ranked.filter(function (p) { return p.rank === 1 && p.score > 0; });
     var status = !ranked.length || !ranked[0].score ? 'Thanks for playing!' : top.length > 1 ? '\uD83E\uDD1D Tie for first: ' + esc(Core.joinNames(top.map(function (p) { return p.name; }))) : '\uD83C\uDFC6 ' + esc(top[0].name) + ' wins!';
-    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Final results', '\uD83C\uDFC1 ' + g.total + ' questions', 'Quiz complete') +
+    var box = sboxOpen('leader') + streamHead('Final results', '\uD83C\uDFC1 ' + g.total + ' questions', 'Quiz complete') +
       '<div class="sb-body"><div class="sb-status">' + status + '</div><div class="sb-board">' +
-      (ranked.length ? ranked.slice(0, 8).map(function (p) { return '<div class="sb-row' + (p.rank === 1 && p.score > 0 ? ' first' : '') + '"><b>' + (medal[p.rank] || p.rank) + '</b><span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + ' pts</span></div>'; }).join('') : '<div class="sb-row"><span class="n">No points awarded</span></div>') +
+      (ranked.length ? ranked.slice(0, 5).map(function (p) { return '<div class="sb-row' + (p.rank === 1 && p.score > 0 ? ' first' : '') + '"><b>' + (medal[p.rank] || p.rank) + '</b><span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + ' pts</span></div>'; }).join('') : '<div class="sb-row"><span class="n">No points awarded</span></div>') +
       '</div></div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">\uD83C\uDFC1 Quiz finished</span><span class="grow"></span></div>' +
       '<button class="btn primary big sc-again" data-act="again">\uD83D\uDD01 Play again \u2013 back to game selection</button>' + tieBanner(g) +
@@ -148,7 +149,7 @@
           return '<div class="sb-row' + (win ? ' first' : '') + '"><b>' + (win ? '👑' : '') + '</b><span class="n">' + esc(x.name) + '</span><span class="s">' + (x.diff === null ? '–' : esc(String(x.guess))) + '</span></div>'; }).join('') + '</div>' +
           '<div class="sb-status">' + (r.winners.length === 1 ? '🏆 ' + esc(tbPlayer(g, r.winners[0]).name) + ' wins!' : '🤝 Still tied!') + '</div>' : '<div class="sb-hint"><b>Closest number wins</b> ' + names + '</div>';
     }
-    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : ''), th && tb.kind ? th.icon + ' ' + esc(th.label) : '🏁 Final', '🤝 Tied: ' + tb.ids.length) +
+    var box = sboxOpen(Q && tb.kind ? Q.theme : 'leader') + streamHead('Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : ''), th && tb.kind ? th.icon + ' ' + esc(th.label) : '🏁 Final', '🤝 Tied: ' + tb.ids.length) +
       '<div class="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + qhtml + '</div></div>' + extra + '</div></div></div>';
     var priv = tb.kind === 'number' && !r ? '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream until you reveal</div><div class="ans">' + esc(fmtAns(Q)) + '</div></div>' : '';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">🤝 Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="grow"></span></div>' + priv + '<div class="sc-tb">' + inner + '</div></div>';

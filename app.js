@@ -88,6 +88,8 @@
   var bgOn = 'bgA', lastKey = null, preloaded = {};
   var portraitMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null, lastArgs = null;
   function isPortrait() { return !!(portraitMQ && portraitMQ.matches); }
+  /* portrait art, also used as the Streamer Mode capture-box backdrop */
+  App.tallImg = function (key) { return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; };
   function imgUrl(key, variant) {
     var l = IMG[key] || IMG.general;
     if (isPortrait()) return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg';

@@ -269,3 +269,29 @@ body.streamer.streamer #app{position:static;inset:auto;max-width:none;margin:0;p
 .sc-nav .btn[disabled]{opacity:.45}
 .tb-pick{display:grid;gap:8px;margin-top:8px}
 .tb-pick .btn small{display:block;font-weight:600;opacity:.85;margin-top:2px}
+
+/* Streamer Mode: themed artwork behind everything; text sits on dark panels so it stays readable */
+.sbox{background-color:#2a0d66;background-size:100% 100%;background-position:center;background-repeat:no-repeat}
+.sb-head,.sb-sub{text-shadow:0 .3cqw .8cqw rgba(0,0,0,.8)}
+.sb-head{background:rgba(20,8,50,.78);padding:1.4cqw 3cqw;border-radius:99cqw}
+.sb-sub span{background:rgba(20,8,50,.78)}
+.sb-q{background:rgba(20,8,50,.74);padding:3cqw 4cqw;border-radius:4cqw;max-width:100%;box-sizing:border-box}
+.sb-hint{background:rgba(48,32,6,.84)}
+.sb-opt{background:rgba(20,8,50,.82)}
+.sb-reveal{background:rgba(8,48,28,.88)}
+.sb-status{background:rgba(20,8,50,.78);border-radius:3cqw;padding:1.8cqw 3cqw}
+.sb-row{background:rgba(20,8,50,.82)}
+.sb-row.first{background:rgba(70,52,6,.9)}
+.sb-theme{background:rgba(20,8,50,.72);color:rgba(255,255,255,.6)}
+.sb-theme.on{background:rgba(70,52,6,.9);color:#fff}
+.sb-sum{background:rgba(20,8,50,.78);border-radius:3cqw;padding:2cqw}
+
+/* artwork with a built-in neon frame (game selection, leaderboard): content goes inside the frame, the art keeps its own title */
+.sbox.framed .sb-head,.sbox.framed .sb-sub{display:none}
+.sbox.framed .sb-in{padding:19cqh 13cqw 31cqh 13cqw}
+.sbox.framed .sb-body{margin-top:0}
+.sbox.framed .sb-theme{font-size:3.5cqw;padding:1.1cqw 2cqw}
+.sbox.framed .sb-themes{gap:1.1cqw}
+.sbox.framed .sb-status{font-size:5.4cqw;padding:1.2cqw 2cqw}
+.sbox.framed .sb-row{font-size:4.8cqw;padding:1.5cqw 2.4cqw}
+.sbox.framed .sb-sumrow{font-size:3.3cqw}
