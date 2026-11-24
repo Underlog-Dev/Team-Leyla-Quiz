@@ -101,7 +101,17 @@
   var portraitMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null, lastArgs = null;
   function isPortrait() { return !!(portraitMQ && portraitMQ.matches); }
   /* portrait art, also used as the Streamer Mode capture-box backdrop */
-  App.tallImg = function (key) { return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; };
+  /* streamer box art: fetched once into memory (blob) so re-renders never re-download or flash a plain background */
+  var artBlob = {};
+  App.tallImg = function (key) { var u = IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; return artBlob[u] || u; };
+  App.warmArt = function () {
+    if (!window.fetch || !window.URL || !URL.createObjectURL) return;
+    Object.keys(IMG).forEach(function (k) {
+      var u = IMGDIR + 'bg-' + k + '-tall.jpg'; if (artBlob[u]) return;
+      fetch(u).then(function (r) { return r.ok ? r.blob() : null; }).then(function (b) { if (b) artBlob[u] = URL.createObjectURL(b); }).catch(function () {});
+    });
+  };
+  if (App.embed) setTimeout(App.warmArt, 0);
   function imgUrl(key, variant) {
     var l = IMG[key] || IMG.general;
     if (isPortrait()) return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg';

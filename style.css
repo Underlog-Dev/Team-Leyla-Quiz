@@ -589,3 +589,6 @@ body.shell{margin:0;min-height:100dvh;overflow:auto}
 .sbox.hm .hm-abc span{font-size:3.4cqw;min-width:0}
 .sbox.hm.framed .sb-in{padding:21cqh 14cqw 12cqh 14cqw}
 html:has(body.shell),body.shell{overflow:auto!important;height:auto!important;-webkit-overflow-scrolling:touch}
+
+.sbox.hm{background-color:#0a1a5c}
+.sbox.riddle,body.riddle .sbox{background-color:#0b3a22}

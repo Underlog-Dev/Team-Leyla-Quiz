@@ -69,8 +69,8 @@
       '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every word (1 pt)' }], s.pointsMode) + '</div>';
     var c2 = '<div class="col">' + ('<label class="lbl">Number of words</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="200" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="hcustom" style="margin-top:.4em">' : '')) +
-      '<label class="lbl">Host plays along?</label>' + seg('hostPlay', [{ v: 0, l: 'No – host sees the word' }, { v: 1, l: '🙈 Yes – host can’t see it' }], s.hostPlay ? 1 : 0) +
-      (s.hostPlay ? '<p class="help">The word stays hidden from you and there’s no timer. <b>Reveal answer</b> shows it to you only; then <b>Reveal to stream</b> shows everyone. (Only works with random words.)</p>' :
+      (custom ? '' : '<label class="lbl">Host plays along?</label>' + seg('hostPlay', [{ v: 0, l: 'No – host sees the word' }, { v: 1, l: '🙈 Yes – host can’t see it' }], s.hostPlay ? 1 : 0)) +
+      (s.hostPlay && !custom ? '<p class="help">The word stays hidden from you and there’s no timer. <b>Reveal answer</b> shows it to you only; then <b>Reveal to stream</b> shows everyone. </p>' :
         '<label class="lbl">Timer per word</label>' + seg('timer', [0, 60, 90, 120, 180, 300].map(function (t) { return { v: t, l: timerLabel(t) }; }).concat([{ v: 'custom', l: 'Custom' }]), s.timerCustom ? 'custom' : s.timer) +
         (s.timerCustom ? '<input type="number" min="5" max="3600" inputmode="numeric" placeholder="Seconds" value="' + esc(s.timer || '') + '" data-input="htimer" style="margin-top:.4em">' : '')) +
       '<label class="lbl">Category clue</label>' + seg('showCat', [{ v: 1, l: 'Show' }, { v: 0, l: 'Hide' }], s.showCat ? 1 : 0) +
@@ -407,7 +407,7 @@
   }
   function renderStreamLobby(app, s, f, start, links) {
     var flat = s.pointsMode === 'flat', custom = s.src === 'custom';
-    var rows = [['🎯 Difficulty', custom ? 'Your own words' : f.dl.length === 3 ? 'Mixed' : f.dl.map(cap).join(' + ')], ['🔤 Words', String(custom ? f.cw : f.want || '')], ['🏆 Points', flat ? '1 point each' : 'Harder = more'], ['❤️ Wrong guesses', '6'], ['⏱ Timer', s.hostPlay ? 'Off · host plays along' : timerLabel(s.timer || 0)]];
+    var rows = [['🎯 Difficulty', custom ? 'Your own words' : f.dl.length === 3 ? 'Mixed' : f.dl.map(cap).join(' + ')], ['🔤 Words', String(custom ? f.cw : f.want || '')], ['🏆 Points', flat ? '1 point each' : 'Harder = more'], ['❤️ Wrong guesses', '6'], ['⏱ Timer', (s.hostPlay && !custom) ? 'Off · host plays along' : timerLabel(s.timer || 0)]];
     var box = sboxOpen('framed', 'hsetup') + '<div class="hm-lobby"><div class="hm-big">Get ready to guess! 🔤</div>' + rows.map(function (r) { return '<div class="hm-row"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('') + '</div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><button class="btn small" data-act="go-mode">🎮 Game Night</button><span class="pill">🎮 Game selection</span><span class="grow"></span></div>' +
       '<div class="sc-start">' + f.msg + start + '</div><div class="row">' + links + '</div><div class="setup-grid sc-form">' + f.cols + '</div></div>';
