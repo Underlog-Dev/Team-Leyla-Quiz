@@ -295,3 +295,6 @@ body.streamer.streamer #app{position:static;inset:auto;max-width:none;margin:0;p
 .sbox.framed .sb-status{font-size:5.4cqw;padding:1.2cqw 2cqw}
 .sbox.framed .sb-row{font-size:4.8cqw;padding:1.5cqw 2.4cqw}
 .sbox.framed .sb-sumrow{font-size:3.3cqw}
+
+/* question alone: sit a little higher, in the art's gap; hint/options/answer take the space back */
+.sb-body.soloq .sb-qwrap{padding-bottom:44cqw}

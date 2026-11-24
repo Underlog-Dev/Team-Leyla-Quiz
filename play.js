@@ -71,7 +71,7 @@
     /* ---- PUBLIC: nothing but question, hint and options is ever rendered in here ---- */
     var box = sboxOpen(Q.theme) + '<div class="sb-head"><span>🐣 Team Leyla Quiz</span><span>Question ' + (g.index + 1) + ' of ' + g.total + '</span></div>' +
       '<div class="sb-sub"><span>' + th.icon + ' ' + esc(th.label) + '</span><span>' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>' +
-      '<div class="sb-body" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
+      '<div class="sb-body' + (!cur.hint && !mcOn && !cur.revealed ? ' soloq' : '') + '" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
       (cur.hint ? '<div class="sb-hint"><b>💡 Hint</b> ' + esc(Core.safeHint(Q)) + '</div>' : '') +
       (cur.revealed ? revealBlock(g, Q) : '') +
       (mcOn ? '<div class="sb-opts">' + cur.options.map(function (o, i) { return '<div class="sb-opt"><b>' + 'ABCD'[i] + '</b><span>' + esc(o) + '</span></div>'; }).join('') + '</div>' : '') +
