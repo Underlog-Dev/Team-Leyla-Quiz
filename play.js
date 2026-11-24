@@ -16,7 +16,7 @@
 
   /* ---------- start ---------- */
   App.actions.start = function () {
-    var s = App.setup, pool = App.poolBank(s);
+    var s = App.embed ? Object.assign({}, App.setup, { mode: 'stream' }) : App.setup, pool = App.poolBank(s);
     var want = s.count === 'custom' ? Math.max(1, parseInt(s.custom, 10) || 0) : s.count;
     if (!want) { App.toast('Enter how many questions'); return; }
     var res = Core.buildQuiz(pool, { themes: [], difficulty: App.diffList(s) }, Math.min(want, 500), App.used);
@@ -92,16 +92,14 @@
       '<div class="row sc-nav"><button class="btn big" style="flex:0 0 auto"' + (g.index > 0 ? ' data-act="back"' : ' disabled') + '>← Back</button>' +
       '<button class="btn primary big grow" data-act="next">' + (last ? 'Finish quiz 🏁' : 'Next question →') + '</button></div>' +
       '<div class="sc-lb">' + leaderboard() + '</div></div>';
-    document.body.classList.add('streamer');
-    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">📺 Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+    App.streamOut(app, box, ctl);
     var inp = document.getElementById('award-name'); if (inp && typed) inp.value = typed;
     fitStream();
   }
   /* opens the capture box with the same portrait artwork the mobile layout uses */
   function sboxOpen(key) { return '<div class="sbox' + (key === 'setup' || key === 'leader' ? ' framed' : '') + '" id="sbox" style="background-image:url(\'' + App.tallImg(key) + '\')"><div class="sb-in">'; }
   function streamLayout(app, box, ctl) {
-    document.body.classList.add('streamer');
-    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">\uD83D\uDCFA Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+    App.streamOut(app, box, ctl);
   }
   function streamHead(left, sub1, sub2) {
     return '<div class="sb-head"><span>\uD83D\uDC23 Team Leyla Quiz</span><span>' + left + '</span></div><div class="sb-sub"><span>' + sub1 + '</span><span>' + sub2 + '</span></div>';

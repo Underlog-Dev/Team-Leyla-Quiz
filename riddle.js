@@ -67,7 +67,7 @@
       return '<button class="chip ' + d[0] + '" data-act="rdiff" data-v="' + d[0] + '" aria-pressed="' + (dl.indexOf(d[0]) !== -1) + '">' + d[1] + (flat ? '' : ' ' + d[2] + 'pt' + (d[2] > 1 ? 's' : '')) + '</button>';
     }).join('') + '<button class="chip mixed" data-act="rdiff" data-v="all" aria-pressed="' + (dl.length === 3) + '">Mixed (all)</button>';
     var msg = avail === 0 ? '<span class="notice warn">No unused riddles left for these settings.</span>' : avail < want ? '<span class="notice">Only ' + avail + ' unused riddles match.</span>' : '<span class="help">' + avail + ' riddles available</span>';
-    var c1 = '<div class="col"><label class="lbl">How to play</label>' + seg('mode', [{ v: 'team', l: '🧩 Team' }, { v: 'vs', l: '⚔️ VS (first to answer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
+    var c1 = '<div class="col">' + (App.embed ? '' : '<label class="lbl">How to play</label>' + seg('mode', [{ v: 'team', l: '🧩 Team' }, { v: 'vs', l: '⚔️ VS (first to answer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode)) +
       '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label><div class="seg" role="group">' + diffBtns + '</div>' +
       '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every riddle (1 pt)' }], s.pointsMode) + '</div>';
     var c2 = '<div class="col"><label class="lbl">Number of riddles</label>' + seg('count', countOpts, s.count) +
@@ -83,7 +83,7 @@
     App.setBackdrop('rsetup');
     var s = App.rsetup; s.difficulty = diffList(s); if (!s.pointsMode) s.pointsMode = 'diff';
     var f = setupCols(s), start = '<button class="btn primary" data-act="r-start"' + (f.avail === 0 ? ' disabled' : '') + '>Start riddles 🧩</button>';
-    if (s.mode === 'stream') { renderStreamLobby(app, s, f, start); return; }
+    if (s.mode === 'stream' && !App.embed) { renderStreamLobby(app, s, f, start); return; }
     app.innerHTML = '<div class="v-rsetup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Riddle game selection"><div class="setup-grid">' + f.cols + '</div></section></div><div class="setup-actions">' + f.msg + start + '</div></div>';
   }
   App.actions.rset = function (el) {
@@ -103,7 +103,7 @@
 
   /* ---------- start ---------- */
   App.actions['r-start'] = function () {
-    var s = App.rsetup, want = wantCount(s);
+    var s = App.embed ? Object.assign({}, App.rsetup, { mode: 'stream' }) : App.rsetup, want = wantCount(s);
     if (!want) { App.toast('Enter how many riddles'); return; }
     var res = Core.buildRiddles(pool(s), diffList(s), Math.min(want, 500), App.rused);
     if (!res.riddles.length) { App.toast('No unused riddles left for these settings'); return; }
@@ -316,8 +316,7 @@
   /* ---------- streamer mode (capture box uses the riddle mobile art) ---------- */
   function sboxOpen(key, cls) { return '<div class="sbox ' + (cls || '') + '" id="sbox" style="background-image:url(\'' + App.tallImg(key) + '\')"><div class="sb-in">'; }
   function streamLayout(app, box, ctl) {
-    document.body.classList.add('streamer');
-    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">📺 Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+    App.streamOut(app, box, ctl);
   }
   function streamHead(left, a, b) { return '<div class="sb-head"><span>🐣 Team Leyla Riddles</span><span>' + left + '</span></div><div class="sb-sub"><span>' + a + '</span><span>' + b + '</span></div>'; }
   function winnersOf(g) {

@@ -32,8 +32,17 @@
   };
   App.markUsed = function (id) { if (App.used.indexOf(id) === -1) App.used.push(id); };
 
+  /* Streamer shell: stream.html shows this app in a 9:16 iframe (?embed=1) = the capture box; private controls live beside it */
+  App.embed = /[?&]embed=1/.test(location.search);
+  App.embedPost = function (ctl) { try { parent.postMessage({ t: 'ctl', html: ctl || '', cls: document.body.className }, location.origin); } catch (e) {} };
+  App.streamOut = function (app, box, ctl) {
+    document.body.classList.add('streamer');
+    if (App.embed) { document.body.classList.add('embedded'); app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '</div></div>'; App.embedPost(ctl); return; }
+    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">\uD83D\uDCFA Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+  };
   var toastT;
   App.toast = function (msg) {
+    if (App.embed) { try { parent.postMessage({ t: 'toast', msg: msg }, location.origin); } catch (e) {} return; }
     var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
     clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('show'); }, 1600);
   };
@@ -49,6 +58,7 @@
     document.body.removeChild(ta); return ok;
   }
   App.writeClipboard = function (text) {
+    if (App.embed) { try { parent.postMessage({ t: 'copy', text: text }, location.origin); } catch (e) {} return Promise.resolve(true); }
     return new Promise(function (resolve) {
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(function () { resolve(true); }, function () { resolve(fallbackCopy(text)); });
@@ -84,7 +94,7 @@
     nature: ['bg-nature.jpg'], science: ['bg-science.jpg'], history: ['bg-history.jpg'], movies: ['bg-movies.jpg'],
     tv: ['bg-tv.jpg', 'bg-tv2.jpg'], music: ['bg-music.jpg'], celebrities: ['bg-celebrities.jpg'], gaming: ['bg-gaming.jpg'],
     food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg'],
-    mode: ['bg-mode.jpg'], rhome: ['bg-rhome.jpg'], rsetup: ['bg-rsetup.jpg'], rleader: ['bg-rleader.jpg'], riddle: ['bg-riddle.jpg'], hangman: ['bg-hangman.jpg']
+    mode: ['bg-mode.jpg'], rhome: ['bg-rhome.jpg'], rsetup: ['bg-rsetup.jpg'], rleader: ['bg-rleader.jpg'], riddle: ['bg-riddle.jpg'], hangman: ['bg-hangman.jpg'], hsetup: ['bg-hangman.jpg'], hleader: ['bg-hangman.jpg']
   };
   var BANNER = { home: 1, setup: 1, leader: 1, mode: 1, rhome: 1, rsetup: 1, rleader: 1 };
   var bgOn = 'bgA', lastKey = null, preloaded = {};
@@ -126,7 +136,7 @@
     if (im.complete) show();
   };
   /* warm the cache with the page backgrounds so Home/Setup/Leaderboard appear instantly */
-  setTimeout(function () { ['mode', 'home', 'setup', 'leader', 'rsetup', 'hangman'].forEach(function (k) { App.preload(k); }); }, 1500);
+  setTimeout(function () { ['mode', 'home', 'setup', 'leader', 'rsetup', 'hangman', 'hsetup'].forEach(function (k) { App.preload(k); }); }, 1500);
 
   /* ---------- pools ---------- */
   App.poolBank = function (s) {
@@ -150,6 +160,7 @@
     /* 🏠 = the game's own home (quiz home / riddles home); 🎮 = Game Night, the main home screen */
     if (v !== 'mode' && v !== 'home' && v !== 'rhome' && !hv) h += '<button class="icon-btn" data-act="' + (rv ? 'r-home' : 'go-home') + '" aria-label="Game home">🏠</button>';
     if (v !== 'mode') h += '<button class="icon-btn" data-act="go-mode" aria-label="Game Night - choose a game">🎮</button>';
+    if (v === 'mode' && !App.embed) h += '<button class="icon-btn" data-act="open-stream-shell" aria-label="Streamer mode - whole site in the capture box">🎥</button>';
     var stats = (rv && v !== 'mode') ? 'r-stats' : hv ? 'h-stats' : 'open-stats';
     return '<div class="hud">' + (extra || '') + h +
       '<button class="icon-btn" data-act="' + stats + '" aria-label="Statistics">📊</button>' +
@@ -167,6 +178,7 @@
     }
     App.resetScroll = false; App._lastView = App.view;
     App._render();
+    if (App.embed && !document.body.classList.contains('streamer')) App.embedPost('');
     if (keep) {
       [].forEach.call(app.querySelectorAll(SCROLLERS), function (e, i) { if (keep.els[i]) e.scrollTop = keep.els[i]; });
       if (keep.y) window.scrollTo(0, keep.y);
@@ -236,8 +248,8 @@
     if (avail === 0) msg = '<span class="notice warn">No unused questions left for these settings.</span>';
     else if (avail < want) msg = '<span class="notice">Only ' + avail + ' unused questions match.</span>';
     else msg = '<span class="help">' + avail + ' questions available</span>';
-    var cols = '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
-      (s.mode !== 'solo' ? '<label class="lbl">Host plays along?</label>' + seg('hostPlay', [{ v: 0, l: 'No – host sees answers' }, { v: 1, l: '🙈 Yes – host can’t see answers' }], s.hostPlay ? 1 : 0) + (s.hostPlay ? '<p class="help">The answer stays hidden from you. Type viewers’ answers in the <b>Check an answer</b> box, or tap <b>Reveal answer</b>.</p>' : '') : '') +
+    var cols = '<div class="col">' + (App.embed ? '' : '<label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode)) +
+      (s.mode !== 'solo' || App.embed ? '<label class="lbl">Host plays along?</label>' + seg('hostPlay', [{ v: 0, l: 'No – host sees answers' }, { v: 1, l: '🙈 Yes – host can’t see answers' }], s.hostPlay ? 1 : 0) + (s.hostPlay ? '<p class="help">The answer stays hidden from you. Type viewers’ answers in the <b>Check an answer</b> box, or tap <b>Reveal answer</b>.</p>' : '') : '') +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
       '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label>' + multi([
         { v: 'easy', l: 'Easy' + (flat ? '' : ' 1pt'), cls: 'easy', on: dl.indexOf('easy') !== -1 },
@@ -247,11 +259,11 @@
       '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every question (1 pt)' }], s.pointsMode) +
       '<label class="lbl">Number of questions</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="500" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="custom" style="margin-top:.4em">' : '') +
-      (s.mode === 'solo' ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
+      (s.mode === 'solo' && !App.embed ? '<label class="lbl">Timer per question</label>' + seg('timer', [{ v: 0, l: 'Off' }, { v: 15, l: '15s' }, { v: 30, l: '30s' }, { v: 60, l: '60s' }], s.timer) : '') +
       '</div><div class="col"><label class="lbl">Themes <span class="help">(pick several, or none for all)</span></label><div class="seg">' + themeChips + '</div>' +
       (subHtml ? '<details style="margin-top:.5em"><summary class="help">Narrow by subcategory (optional)</summary>' + subHtml + '</details>' : '') + '</div></div>';
     var startBtn = '<button class="btn primary" data-act="start"' + (avail === 0 ? ' disabled' : '') + '>Start quiz 🐣</button>';
-    if (s.mode === 'stream') { App.renderStreamLobby(app, s, cols, msg, startBtn, dl, want); return; }
+    if (s.mode === 'stream' && !App.embed) { App.renderStreamLobby(app, s, cols, msg, startBtn, dl, want); return; }
     app.innerHTML = '<div class="v-setup">' + App.hud() + '<div class="zone"><section class="glass" aria-label="Game selection"><div class="setup-grid">' + cols +
       '</section></div><div class="setup-actions">' + msg + startBtn + '</div></div>';
   }
@@ -314,6 +326,7 @@
     App.copy(Core.leaderboardCopy(h.players.map(function (p, i) { return { id: 'h' + i, name: p.name, score: p.score }; }), App.templates), 'leaderboard');
   };
   App.actions['clear-lb'] = function () { if (window.confirm('Clear saved leaderboards on this device?')) { App.hist = []; App.alltime = {}; store.set('hist', []); store.set('alltime', {}); App.render(); } };
+  App.actions['open-stream-shell'] = function () { location.href = 'stream.html'; };
   App.actions['go-home'] = function () { App.view = 'home'; App.render(); window.scrollTo(0, 0); };
   App.actions['go-setup'] = function () { App.view = 'setup'; App.render(); window.scrollTo(0, 0); };
   App.actions['go-leader'] = function () { App.view = 'leader'; App.render(); window.scrollTo(0, 0); };
@@ -397,6 +410,13 @@
     }
   });
 
+  window.addEventListener('message', function (ev) {
+    if (!App.embed || ev.origin !== location.origin || !ev.data || ev.data.t !== 'act') return;
+    var m = ev.data, holder = document.createElement('div'); holder.style.display = 'none';
+    Object.keys(m.values || {}).forEach(function (id) { var i = document.createElement('input'); i.id = id; i.value = m.values[id]; holder.appendChild(i); });
+    document.body.appendChild(holder);
+    try { var fn = App.actions[m.act]; if (fn) fn({ dataset: m.dataset || {}, value: '' }, {}); } finally { holder.remove(); }
+  });
   document.addEventListener('DOMContentLoaded', function () {
     if (App.game && !BY_ID[App.game.ids[App.game.index]]) App.game = null;
     App.view = 'mode';

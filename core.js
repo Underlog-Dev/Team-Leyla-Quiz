@@ -505,16 +505,14 @@
     var g = {}; (guessed || []).forEach(function (c) { g[c] = 1; });
     return hmNorm(word).split('').map(function (c) { return (c >= 'A' && c <= 'Z') ? (g[c] ? c : '_') : c; });
   }
-  function hmStage(wrong, lives) {
-    lives = lives || 5; if (wrong <= 0) return 0; if (wrong >= lives) return 5;
-    return Math.min(4, Math.max(1, Math.ceil(wrong * 5 / lives)));
-  }
+  /* 0 = nothing drawn yet; wrong guess 1..6 shows picture 1..6 (the 6th is the chick falling = out of lives) */
+  function hmStage(wrong) { return wrong <= 0 ? 0 : Math.min(6, wrong); }
   function hmState(word, guessed, wrongWords, lives) {
     var set = {}; hmLetters(word).forEach(function (c) { set[c] = 1; });
     var wl = (guessed || []).filter(function (c) { return !set[c]; }), wrong = wl.length + (wrongWords || 0);
     var won = hmLetters(word).every(function (c) { return (guessed || []).indexOf(c) !== -1; });
-    var lost = !won && wrong >= lives;
-    return { wrongLetters: wl, wrong: wrong, won: won, lost: lost, stage: hmStage(wrong, lives), left: Math.max(0, lives - wrong) };
+    lives = 6; var lost = !won && wrong >= lives;
+    return { wrongLetters: wl, wrong: wrong, won: won, lost: lost, stage: hmStage(wrong), left: Math.max(0, lives - wrong) };
   }
   function hmShow(word, guessed) {
     return hmMask(word, guessed).map(function (c) { return c === ' ' ? '/' : c; }).join(' ');

@@ -7,7 +7,7 @@
   var tick = null, ALL = ['easy', 'medium', 'hard'];
   var ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 
-  var DEF = { mode: 'team', difficulty: ALL.slice(), pointsMode: 'diff', count: 10, custom: '', timer: 0, timerCustom: false, hostPlay: 0, lives: 5, showCat: 1, src: 'random', words: '' };
+  var DEF = { mode: 'team', difficulty: ALL.slice(), pointsMode: 'diff', count: 10, custom: '', timer: 0, timerCustom: false, hostPlay: 0, lives: 6, showCat: 1, src: 'random', words: '' };
   App.hsetup = Object.assign({}, DEF, store.get('hsetup', {}));
   App.hgame = store.get('hgame', null);
   App.hused = store.get('hused', []); App.hflag = store.get('hflag', []);
@@ -62,7 +62,7 @@
     }).join('') + '<button class="chip mixed" data-act="hdiff" data-v="all" aria-pressed="' + (dl.length === 3) + '">Mixed (all)</button>';
     var msg = custom ? (cw ? '<span class="help">' + cw + ' of your words ready</span>' : '<span class="notice warn">Type at least one word.</span>')
       : avail === 0 ? '<span class="notice warn">No unused words left for these settings.</span>' : avail < want ? '<span class="notice">Only ' + avail + ' unused words match.</span>' : '<span class="help">' + avail + ' words available</span>';
-    var c1 = '<div class="col"><label class="lbl">How to play</label>' + seg('mode', [{ v: 'team', l: '🧩 Team' }, { v: 'vs', l: '⚔️ VS (first to solve)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
+    var c1 = '<div class="col">' + (App.embed ? '' : '<label class="lbl">How to play</label>' + seg('mode', [{ v: 'team', l: '🧩 Team' }, { v: 'vs', l: '⚔️ VS (first to solve)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode)) +
       '<label class="lbl">Words</label>' + seg('src', [{ v: 'random', l: '🎲 Random words' }, { v: 'custom', l: '✍️ My own words' }], s.src) +
       (custom ? '<textarea rows="4" data-input="hwords" placeholder="One word or phrase per line.\nOptional clue: elephant | animal" style="margin-top:.4em">' + esc(s.words) + '</textarea>'
         : '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label><div class="seg" role="group">' + diffBtns + '</div>') +
@@ -73,26 +73,24 @@
       (s.hostPlay ? '<p class="help">The word stays hidden from you and there’s no timer. Use <b>Reveal answer</b> to show it, then tap Next. (Hidden only works with random words.)</p>' :
         '<label class="lbl">Timer per word</label>' + seg('timer', [0, 60, 90, 120, 180, 300].map(function (t) { return { v: t, l: timerLabel(t) }; }).concat([{ v: 'custom', l: 'Custom' }]), s.timerCustom ? 'custom' : s.timer) +
         (s.timerCustom ? '<input type="number" min="5" max="3600" inputmode="numeric" placeholder="Seconds" value="' + esc(s.timer || '') + '" data-input="htimer" style="margin-top:.4em">' : '')) +
-      '<label class="lbl">Wrong guesses allowed</label>' + seg('lives', [5, 7, 10].map(function (n) { return { v: n, l: n }; }), s.lives) +
       '<label class="lbl">Category clue</label>' + seg('showCat', [{ v: 1, l: 'Show' }, { v: 0, l: 'Hide' }], s.showCat ? 1 : 0) +
       '<p class="help" style="margin-top:.6em">💡 Hint button reveals a letter (-1 pt, never below 1).</p></div>';
     return { cols: c1 + c2, msg: msg, ok: custom ? cw > 0 : avail > 0, want: want, dl: dl, cw: cw };
   }
   function renderHSetup(app) {
-    App.setBackdrop('hangman');
+    App.setBackdrop('hsetup');
     var s = App.hsetup; s.difficulty = diffList(s);
     var f = setupCols(s), resume = App.hgame ? '<button class="btn yellow" data-act="h-resume">▶ Resume</button>' : '';
     var start = '<button class="btn primary" data-act="h-start"' + (f.ok ? '' : ' disabled') + '>Start Hangman 🔤</button>';
     var links = resume + '<button class="btn" data-act="h-go-leader">🏆 Leaderboard</button>';
-    if (s.mode === 'stream') { renderStreamLobby(app, s, f, start, links); return; }
-    app.innerHTML = '<div class="v-hsetup">' + App.hud() + '<div class="zone hm-panel"><section aria-label="Hangman game selection"><div class="setup-grid">' + f.cols + '</div></section></div>' +
+    if (s.mode === 'stream' && !App.embed) { renderStreamLobby(app, s, f, start, links); return; }
+    app.innerHTML = '<div class="v-hsetup">' + App.hud() + '<div class="zone hm-panel hm-dark"><section aria-label="Hangman game selection"><div class="setup-grid">' + f.cols + '</div></section></div>' +
       '<div class="hm-tray">' + f.msg + start + '<div class="row hm-links">' + links + '</div></div></div>';
   }
   App.actions.hset = function (el) {
     var k = el.dataset.k, v = el.dataset.v, s = App.hsetup;
     if (k === 'timer') { if (v === 'custom') s.timerCustom = true; else { s.timerCustom = false; s.timer = parseInt(v, 10); } }
     else if (k === 'hostPlay' || k === 'showCat') s[k] = parseInt(v, 10) ? 1 : 0;
-    else if (k === 'lives') s.lives = parseInt(v, 10);
     else s[k] = (k === 'count' && v !== 'custom') ? parseInt(v, 10) : v;
     hsave(); App.render();
   };
@@ -111,7 +109,7 @@
 
   /* ---------- start ---------- */
   App.actions['h-start'] = function () {
-    var s = App.hsetup, words = [], res = null;
+    var s = App.embed ? Object.assign({}, App.hsetup, { mode: 'stream' }) : App.hsetup, words = [], res = null;
     if (s.src === 'custom') { words = parseCustom(s.words); if (!words.length) { App.toast('Type at least one word'); return; } }
     else {
       var want = wantCount(s); if (!want) { App.toast('Enter how many words'); return; }
@@ -121,7 +119,7 @@
     }
     App.hgame = {
       kind: 'hangman', mode: s.mode === 'team' ? 'team' : 'vs', stream: s.mode === 'stream', flat: s.pointsMode === 'flat' ? 1 : 0,
-      hostPlay: s.hostPlay && s.src === 'random' ? 1 : 0, timer: s.hostPlay ? 0 : (s.timer || 0), lives: s.lives || 5, showCat: s.showCat ? 1 : 0, src: s.src,
+      hostPlay: s.hostPlay && s.src === 'random' ? 1 : 0, timer: s.hostPlay ? 0 : (s.timer || 0), lives: 6, showCat: s.showCat ? 1 : 0, src: s.src,
       setup: clone(s), words: words, total: words.length, index: 0, rejected: [], finished: false, done: {},
       cur: fresh(), team: { score: 0, solved: 0, log: [] }, host: Core.newHostState(), started: Date.now()
     };
@@ -179,7 +177,8 @@
     if (!g.hostPlay && g.src !== 'custom') t += '<button class="btn" data-act="h-swap">🔄 New word</button>';
     if (!g.hostPlay) t += '<button class="btn" data-act="h-own">✍️ Own word</button>';
     t += g.hostPlay ? '<button class="btn yellow" data-act="h-reveal">👁 Reveal answer</button>' : '<button class="btn" data-act="h-reveal">👁 Give up</button>';
-    return '<div class="row hm-tools">' + t + '</div>';
+    var own = (!g.hostPlay && g.ownOpen && cur.status === 'play') ? '<div class="row hm-text"><input type="text" id="hg-own" placeholder="Type your own word or phrase – Enter" autocomplete="off" autocapitalize="characters" data-enter="h-own-set" class="grow"><button class="btn small primary" data-act="h-own-set">Use it</button></div>' : '';
+    return '<div class="row hm-tools">' + t + '</div>' + own;
   }
   function privWord(g, Wd, cur) {
     if (cur.status !== 'play') return '';
@@ -215,12 +214,12 @@
   function headPills(g, Wd, cur, stt, stream) {
     var p = pts(), left = g.tb ? '🤝 Tiebreaker' : (g.index === g.total - 1 ? 'Final word' : 'Word ' + (g.index + 1)) + ' of ' + g.total;
     var tmr = g.timer && cur.status === 'play' ? '<span class="pill hm-timer" id="' + (stream ? 'sb-timer' : 'timer') + '">⏱</span>' : '';
-    return '<div class="hm-info"><span class="pill">' + left + '</span>' + (g.showCat ? '<span class="pill cat">' + esc(Wd.cat) + '</span>' : '') + '<span class="pill pts">🎯 ' + p + ' pt' + (p === 1 ? '' : 's') + '</span><span class="pill">' + hearts(stt, g).replace('hm-lives', 'hm-lives') + '</span>' + tmr + '</div>';
+    return '<div class="hm-info"><span class="pill">' + left + '</span>' + (g.showCat ? '<span class="pill cat">' + esc(Wd.cat) + '</span>' : '') + '<span class="pill pts">🎯 ' + p + ' pt' + (p === 1 ? '' : 's') + '</span><span class="pill">' + hearts(stt, g) + '</span>' + tmr + '</div>';
   }
   function boardHtml(g, Wd, cur, stt, stream) {
     var names = stream && g.mode === 'vs' && cur.status === 'won' ? winnersOf(g) : [];
     return headPills(g, Wd, cur, stt, stream) +
-      '<div class="hm-main"><img class="hm-img" src="' + App.imgUrl('hm' + stt.stage + '.jpg') + '" alt="Hangman stage ' + stt.stage + ' of 5">' + (stream ? abcGrid(cur, Wd.word) : '') + '</div>' +
+      '<div class="hm-main">' + (stt.stage ? '<img class="hm-img" src="' + App.imgUrl('hm' + (stt.stage - 1) + '.jpg') + '" alt="Hangman picture ' + stt.stage + ' of 6">' : '<div class="hm-img blank" aria-hidden="true"></div>') + (stream ? abcGrid(cur, Wd.word) : '') + '</div>' +
       wordHtml(Wd, cur, stream) + statusMsg(g, cur, stt) + (names.length ? '<div class="hm-msg win">🏆 ' + esc(Core.joinNames(names)) + '</div>' : '');
   }
 
@@ -311,11 +310,16 @@
   };
   App.actions['h-own'] = function () {
     var g = App.hgame; if (g.hostPlay || C().status !== 'play') return;
-    var t = window.prompt('Type your own word or phrase:'); if (t == null) return;
+    g.ownOpen = !g.ownOpen; App.render();
+    setTimeout(function () { var i = document.getElementById('hg-own'); if (i) i.focus(); }, 30);
+  };
+  App.actions['h-own-set'] = function () {
+    var g = App.hgame; if (g.hostPlay || C().status !== 'play') return;
+    var inp = document.getElementById('hg-own'), t = inp ? inp.value : ''; if (!t.trim()) { App.toast('Type your word first'); return; }
     var w = Core.hmNorm(t); if (w.replace(/[^A-Z]/g, '').length < 2 || w.length > 40) { App.toast('Use 2-40 letters'); return; }
     var o = { word: w, cat: 'Your word', difficulty: Core.hmDifficulty(w), bid: null, own: true };
     if (g.tb) { g.tb.w = o; g.tb.cur = fresh(); } else { g.words[g.index] = o; g.cur = fresh(); }
-    setTimer(); hsave(); App.render();
+    g.ownOpen = false; setTimer(); hsave(); App.render();
   };
   App.actions['h-flag'] = function () {
     var g = App.hgame, Wd = W(); if (!Wd.bid) { App.toast('Only built-in words can be reported'); return; }
@@ -378,10 +382,9 @@
   App.actions['h-copy-lb'] = function () { App.copy(Core.leaderboardCopy(App.hgame.host.players, App.templates), 'leaderboard'); };
 
   /* ---------- streamer mode: the capture box uses the mobile Hangman frame ---------- */
-  function sboxOpen(cls) { return '<div class="sbox hm ' + (cls || '') + '" id="sbox" style="background-image:url(\'' + App.tallImg('hangman') + '\')"><div class="sb-in">'; }
+  function sboxOpen(cls, key) { return '<div class="sbox hm ' + (cls || '') + '" id="sbox" style="background-image:url(\'' + App.tallImg(key || 'hangman') + '\')"><div class="sb-in">'; }
   function streamLayout(app, box, ctl) {
-    document.body.classList.add('streamer');
-    app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">📺 Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
+    App.streamOut(app, box, ctl);
   }
   function renderHStream(app, ta, tg) {
     var g = App.hgame, Wd = W(), cur = C(), stt = st(), play = cur.status === 'play', p = pts();
@@ -396,8 +399,8 @@
   }
   function renderStreamLobby(app, s, f, start, links) {
     var flat = s.pointsMode === 'flat', custom = s.src === 'custom';
-    var rows = [['🎯 Difficulty', custom ? 'Your own words' : f.dl.length === 3 ? 'Mixed' : f.dl.map(cap).join(' + ')], ['🔤 Words', String(custom ? f.cw : f.want || '')], ['🏆 Points', flat ? '1 point each' : 'Harder = more'], ['❤️ Wrong guesses', String(s.lives)], ['⏱ Timer', s.hostPlay ? 'Off · host plays along' : timerLabel(s.timer || 0)]];
-    var box = sboxOpen('framed') + '<div class="hm-lobby"><div class="hm-big">Get ready to guess! 🔤</div>' + rows.map(function (r) { return '<div class="hm-row"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('') + '</div></div></div>';
+    var rows = [['🎯 Difficulty', custom ? 'Your own words' : f.dl.length === 3 ? 'Mixed' : f.dl.map(cap).join(' + ')], ['🔤 Words', String(custom ? f.cw : f.want || '')], ['🏆 Points', flat ? '1 point each' : 'Harder = more'], ['❤️ Wrong guesses', '6'], ['⏱ Timer', s.hostPlay ? 'Off · host plays along' : timerLabel(s.timer || 0)]];
+    var box = sboxOpen('framed', 'hsetup') + '<div class="hm-lobby"><div class="hm-big">Get ready to guess! 🔤</div>' + rows.map(function (r) { return '<div class="hm-row"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('') + '</div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><button class="btn small" data-act="go-mode">🎮 Game Night</button><span class="pill">🎮 Game selection</span><span class="grow"></span></div>' +
       '<div class="sc-start">' + f.msg + start + '</div><div class="row">' + links + '</div><div class="setup-grid sc-form">' + f.cols + '</div></div>';
     streamLayout(app, box, ctl);
@@ -435,7 +438,7 @@
   }
   function renderHResults(app) {
     var g = App.hgame; if (!g) { go('hsetup'); return; }
-    clearInterval(tick); App.setBackdrop('hangman'); record(g);
+    clearInterval(tick); App.setBackdrop('hleader'); record(g);
     if (g.stream) { renderStreamEnd(app, g); return; }
     var body, medal = { 1: '🥇', 2: '🥈', 3: '🥉' };
     if (g.mode === 'team') {
@@ -450,14 +453,14 @@
       if (ranked.length && ranked[0].score > 0 && !topTied(g).length) confetti();
     }
     var extra = g.mode === 'vs' ? '<button class="btn small primary" data-act="h-copy-lb">📋 Copy top three</button><button class="btn small" data-act="h-back-last">↩ Back to last word</button>' : '';
-    app.innerHTML = '<div class="v-hres">' + App.hud() + '<div class="zone hm-panel">' + body + '</div><div class="hm-tray"><div class="row">' + extra + '</div>' +
+    app.innerHTML = '<div class="v-hres">' + App.hud() + '<div class="zone hm-panel hm-dark">' + body + '</div><div class="hm-tray"><div class="row">' + extra + '</div>' +
       '<div class="row rres-actions"><button class="btn yellow grow" data-act="h-again">🔁 Play again</button><button class="btn" data-act="h-go-setup">Change settings</button></div></div></div>';
   }
   function renderStreamEnd(app, g) {
     var ranked = Core.rankPlayers(g.host.players), medal = { 1: '🥇', 2: '🥈', 3: '🥉' };
     var top = ranked.filter(function (p) { return p.rank === 1 && p.score > 0; });
     var status = !ranked.length || !ranked[0].score ? 'Thanks for playing!' : top.length > 1 ? '🤝 Tie for first: ' + esc(Core.joinNames(top.map(function (p) { return p.name; }))) : '🏆 ' + esc(top[0].name) + ' wins!';
-    var box = sboxOpen('framed') + '<div class="hm-lobby"><div class="hm-big">' + status + '</div>' +
+    var box = sboxOpen('framed', 'hleader') + '<div class="hm-lobby"><div class="hm-big">' + status + '</div>' +
       (ranked.length ? ranked.slice(0, 5).map(function (p) { return '<div class="hm-row' + (p.rank === 1 && p.score > 0 ? ' first' : '') + '"><span>' + (medal[p.rank] || p.rank) + ' ' + esc(p.name) + '</span><b>' + p.score + ' pts</b></div>'; }).join('') : '<div class="hm-row"><span>No points awarded</span></div>') + '</div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">🏁 Hangman finished</span><span class="grow"></span></div>' +
       '<button class="btn primary big sc-again" data-act="h-again">🔁 Play again – back to game selection</button>' + tieBanner(g) +
@@ -496,7 +499,7 @@
 
   /* ---------- leaderboard page ---------- */
   function renderHLeader(app) {
-    App.setBackdrop('hangman'); var body, foot = '';
+    App.setBackdrop('hleader'); var body, foot = '';
     if (App.hlbTab === 'alltime') {
       var list = Object.keys(App.hall).map(function (k) { var a = App.hall[k]; return { id: k, name: a.name, score: a.points, games: a.games, wins: a.wins }; });
       var ranked = Core.rankPlayers(list), by = {}; list.forEach(function (x) { by[x.id] = x; });
@@ -511,7 +514,7 @@
         return '<div class="lb-item" style="display:block"><b>' + d + ' · ' + (h.mode === 'vs' ? 'VS' : 'Team') + ' · ' + h.total + ' words</b><div class="help">' + inner + '</div>' + (h.players && h.players.length ? '<button class="btn small primary" style="margin-top:.4em" data-act="h-copy-game" data-i="' + hi + '">📋 Copy top three</button>' : '') + '</div>';
       }).join('') + '</div>' : '<p class="help">No finished Hangman games yet - play one and it appears here.</p>';
     }
-    app.innerHTML = '<div class="v-hleader">' + App.hud() + '<div class="zone hm-panel"><div class="tabs">' +
+    app.innerHTML = '<div class="v-hleader">' + App.hud() + '<div class="zone hm-panel hm-dark"><div class="tabs">' +
       '<button class="chip" data-act="h-lbtab" data-v="recent" aria-pressed="' + (App.hlbTab === 'recent') + '">Recent games</button>' +
       '<button class="chip" data-act="h-lbtab" data-v="alltime" aria-pressed="' + (App.hlbTab === 'alltime') + '">All-time (this device)</button></div>' + body + '</div>' +
       '<div class="hm-tray"><div class="row">' + foot + '<button class="btn small" data-act="h-go-setup">← Back to game selection</button></div></div></div>';
