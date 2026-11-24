@@ -82,15 +82,12 @@
     general: ['bg-general.jpg'], football: ['bg-football.jpg'], sports: ['bg-sports.jpg'], geography: ['bg-geography.jpg'],
     nature: ['bg-nature.jpg'], science: ['bg-science.jpg'], history: ['bg-history.jpg'], movies: ['bg-movies.jpg'],
     tv: ['bg-tv.jpg', 'bg-tv2.jpg'], music: ['bg-music.jpg'], celebrities: ['bg-celebrities.jpg'], gaming: ['bg-gaming.jpg'],
-    food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg'],
-    mode: ['bg-mode.jpg'], rhome: ['bg-rhome.jpg'], rsetup: ['bg-rsetup.jpg'], rleader: ['bg-rleader.jpg'], riddle: ['bg-riddle.jpg']
+    food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg']
   };
-  var BANNER = { home: 1, setup: 1, leader: 1, mode: 1, rhome: 1, rsetup: 1, rleader: 1 };
+  var BANNER = { home: 1, setup: 1, leader: 1 };
   var bgOn = 'bgA', lastKey = null, preloaded = {};
   var portraitMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null, lastArgs = null;
   function isPortrait() { return !!(portraitMQ && portraitMQ.matches); }
-  /* portrait art, also used as the Streamer Mode capture-box backdrop */
-  App.tallImg = function (key) { return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; };
   function imgUrl(key, variant) {
     var l = IMG[key] || IMG.general;
     if (isPortrait()) return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg';
@@ -125,7 +122,7 @@
     if (im.complete) show();
   };
   /* warm the cache with the page backgrounds so Home/Setup/Leaderboard appear instantly */
-  setTimeout(function () { ['home', 'setup', 'leader', 'mode', 'rsetup'].forEach(function (k) { App.preload(k); }); }, 1500);
+  setTimeout(function () { ['home', 'setup', 'leader'].forEach(function (k) { App.preload(k); }); }, 1500);
 
   /* ---------- pools ---------- */
   App.poolBank = function (s) {
@@ -144,11 +141,9 @@
 
   /* ---------- shell ---------- */
   App.hud = function (extra) {
-    var rv = !!(App.RVIEWS && App.RVIEWS[App.view]);
-    var homeAct = rv ? (App.view === 'rhome' ? 'go-home' : 'r-home') : 'go-home';
-    var h = (rv || App.view !== 'home') ? '<button class="icon-btn" data-act="' + homeAct + '" aria-label="Home">🏠</button>' : '';
+    var h = App.view !== 'home' ? '<button class="icon-btn" data-act="go-home" aria-label="Home">🏠</button>' : '';
     return '<div class="hud">' + (extra || '') + h +
-      '<button class="icon-btn" data-act="' + (rv ? 'r-stats' : 'open-stats') + '" aria-label="Statistics">📊</button>' +
+      '<button class="icon-btn" data-act="open-stats" aria-label="Question bank statistics">📊</button>' +
       '<button class="icon-btn" data-act="open-settings" aria-label="Settings">⚙️</button></div>';
   };
   App.topbar = App.hud;
@@ -173,11 +168,8 @@
     document.body.classList.toggle('calm', !!App.settings.calm);
     var v = App.view;
     document.body.classList.remove('streamer');
-    var isR = !!(App.RVIEWS && App.RVIEWS[v] && App.renderRiddle);
-    document.body.classList.toggle('riddle', isR && v !== 'mode');
     if ((v === 'play' || v === 'results') && !App.game) v = App.view = 'home';
-    if (isR) App.renderRiddle(v, app);
-    else if (v === 'play') App.renderPlay(app);
+    if (v === 'play') App.renderPlay(app);
     else if (v === 'results') App.renderResults(app);
     else if (v === 'tiebreak') App.renderTiebreak(app);
     else if (v === 'setup') { App.setBackdrop('setup'); renderSetup(app); }
@@ -189,7 +181,7 @@
   function renderHome(app) {
     var resume = App.game ? '<button class="btn yellow" data-act="resume">▶ Resume quiz</button>' : '';
     app.innerHTML = '<div class="v-home">' + App.hud() + '<div class="zone">' +
-      '<button class="btn yellow play-btn" data-act="go-mode">▶ Play</button>' +
+      '<button class="btn yellow play-btn" data-act="go-setup">▶ Play</button>' +
       '<div class="home-links">' + resume + '<button class="btn" data-act="go-leader">🏆 Leaderboard</button></div>' +
       '</div></div>';
   }

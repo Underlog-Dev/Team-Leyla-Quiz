@@ -69,9 +69,9 @@
     var mcOn = isMc(g, cur);
     if (mcOn && !cur.options) cur.options = Core.mcOptions(Q);
     /* ---- PUBLIC: nothing but question, hint and options is ever rendered in here ---- */
-    var box = sboxOpen(Q.theme) + '<div class="sb-head"><span>🐣 Team Leyla Quiz</span><span>Question ' + (g.index + 1) + ' of ' + g.total + '</span></div>' +
+    var box = '<div class="sbox" id="sbox"><div class="sb-in"><div class="sb-head"><span>🐣 Team Leyla Quiz</span><span>Question ' + (g.index + 1) + ' of ' + g.total + '</span></div>' +
       '<div class="sb-sub"><span>' + th.icon + ' ' + esc(th.label) + '</span><span>' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span></div>' +
-      '<div class="sb-body' + (!cur.hint && !mcOn && !cur.revealed ? ' soloq' : '') + '" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
+      '<div class="sb-body" id="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' +
       (cur.hint ? '<div class="sb-hint"><b>💡 Hint</b> ' + esc(Core.safeHint(Q)) + '</div>' : '') +
       (cur.revealed ? revealBlock(g, Q) : '') +
       (mcOn ? '<div class="sb-opts">' + cur.options.map(function (o, i) { return '<div class="sb-opt"><b>' + 'ABCD'[i] + '</b><span>' + esc(o) + '</span></div>'; }).join('') + '</div>' : '') +
@@ -96,8 +96,6 @@
     var inp = document.getElementById('award-name'); if (inp && typed) inp.value = typed;
     fitStream();
   }
-  /* opens the capture box with the same portrait artwork the mobile layout uses */
-  function sboxOpen(key) { return '<div class="sbox' + (key === 'setup' || key === 'leader' ? ' framed' : '') + '" id="sbox" style="background-image:url(\'' + App.tallImg(key) + '\')"><div class="sb-in">'; }
   function streamLayout(app, box, ctl) {
     document.body.classList.add('streamer');
     app.innerHTML = '<div class="v-stream"><div class="sb-wrap">' + box + '<div class="sb-note">\uD83D\uDCFA Capture this box only. Everything else is private.</div></div>' + ctl + '</div>';
@@ -114,8 +112,9 @@
       return '<div class="sb-theme' + (on ? ' on' : '') + '"><span>' + T.icon + '</span><span class="t">' + esc(T.label) + '</span></div>';
     }).join('');
     var flat = s.pointsMode === 'flat';
-    var sum = '<div class="sb-sumrow"><span>' + (dl.length === 3 ? 'Mixed' : dl.map(cap).join(' + ')) + ' \u00B7 ' + esc(String(want || '')) + ' questions</span><b>' + (s.format === 'mc' ? 'Multiple choice' : 'Open answer') + '</b></div>';
-    var box = sboxOpen('setup') + streamHead('Game selection', '🎮 Next game', all ? 'All themes' : s.themes.length + ' theme' + (s.themes.length === 1 ? '' : 's')) +
+    var sum = [['Difficulty', dl.length === 3 ? 'Mixed' : dl.map(cap).join(' + ')], ['Questions', String(want || '')], ['Answers', s.format === 'mc' ? 'Multiple choice' : 'Open answer'], ['Points', flat ? '1 point each' : 'Harder = more']]
+      .map(function (r) { return '<div class="sb-sumrow"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
+    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Game selection', '🎮 Next game', all ? 'All themes' : s.themes.length + ' theme' + (s.themes.length === 1 ? '' : 's')) +
       '<div class="sb-body"><div class="sb-status">Pick a theme! 🎯</div><div class="sb-themes">' + chips + '</div><div class="sb-sum">' + sum + '</div></div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><button class="btn small" data-act="go-home">🏠 Home</button><span class="pill">🎮 Game selection</span><span class="grow"></span></div>' +
       '<div class="sc-start">' + msg + startBtn + '</div><div class="setup-grid sc-form">' + cols.replace(/<\/div>$/, '') + '</div></div>';
@@ -126,9 +125,9 @@
     var ranked = Core.rankPlayers(g.host.players), medal = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
     var top = ranked.filter(function (p) { return p.rank === 1 && p.score > 0; });
     var status = !ranked.length || !ranked[0].score ? 'Thanks for playing!' : top.length > 1 ? '\uD83E\uDD1D Tie for first: ' + esc(Core.joinNames(top.map(function (p) { return p.name; }))) : '\uD83C\uDFC6 ' + esc(top[0].name) + ' wins!';
-    var box = sboxOpen('leader') + streamHead('Final results', '\uD83C\uDFC1 ' + g.total + ' questions', 'Quiz complete') +
+    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Final results', '\uD83C\uDFC1 ' + g.total + ' questions', 'Quiz complete') +
       '<div class="sb-body"><div class="sb-status">' + status + '</div><div class="sb-board">' +
-      (ranked.length ? ranked.slice(0, 5).map(function (p) { return '<div class="sb-row' + (p.rank === 1 && p.score > 0 ? ' first' : '') + '"><b>' + (medal[p.rank] || p.rank) + '</b><span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + ' pts</span></div>'; }).join('') : '<div class="sb-row"><span class="n">No points awarded</span></div>') +
+      (ranked.length ? ranked.slice(0, 8).map(function (p) { return '<div class="sb-row' + (p.rank === 1 && p.score > 0 ? ' first' : '') + '"><b>' + (medal[p.rank] || p.rank) + '</b><span class="n">' + esc(p.name) + '</span><span class="s">' + p.score + ' pts</span></div>'; }).join('') : '<div class="sb-row"><span class="n">No points awarded</span></div>') +
       '</div></div></div></div>';
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">\uD83C\uDFC1 Quiz finished</span><span class="grow"></span></div>' +
       '<button class="btn primary big sc-again" data-act="again">\uD83D\uDD01 Play again \u2013 back to game selection</button>' + tieBanner(g) +
@@ -136,23 +135,19 @@
       '<div class="sc-lb">' + leaderboard() + '</div></div>';
     streamLayout(app, box, ctl);
   }
-  /* Tiebreaker inside the box. Answers/winners appear only after Leyla taps the winner (or reveals). */
-  function renderStreamTie(app, g, tb, Q, th, inner) {
-    var names = tb.ids.map(function (id) { return esc(tbPlayer(g, id).name); }).join(' · '), r = tb.revealed && tb.kind === 'number' ? tb.result : null;
-    var winner = tb.winner && tbPlayer(g, tb.winner), extra, qhtml;
-    if (!tb.kind) { qhtml = 'Tiebreaker time! 🤝'; extra = '<div class="sb-hint"><b>Tied for first</b> ' + names + '</div>'; }
-    else {
-      qhtml = esc(Q.question);
-      if (tb.kind === 'normal') extra = winner ? '<div class="sb-reveal"><b>✅ Answer</b> ' + esc(Q.answer) + '<span class="sb-win">🏆 ' + esc(winner.name) + ' wins!</span></div>' : '<div class="sb-hint"><b>First correct answer wins</b> ' + names + '</div>';
-      else extra = r ? '<div class="sb-hint"><b>Answer</b> ' + esc(fmtAns(Q)) + '</div><div class="sb-board">' + r.rows.map(function (x) {
-          var win = r.winners.indexOf(x.id) !== -1;
-          return '<div class="sb-row' + (win ? ' first' : '') + '"><b>' + (win ? '👑' : '') + '</b><span class="n">' + esc(x.name) + '</span><span class="s">' + (x.diff === null ? '–' : esc(String(x.guess))) + '</span></div>'; }).join('') + '</div>' +
-          '<div class="sb-status">' + (r.winners.length === 1 ? '🏆 ' + esc(tbPlayer(g, r.winners[0]).name) + ' wins!' : '🤝 Still tied!') + '</div>' : '<div class="sb-hint"><b>Closest number wins</b> ' + names + '</div>';
-    }
-    var box = sboxOpen(Q && tb.kind ? Q.theme : 'leader') + streamHead('Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : ''), th && tb.kind ? th.icon + ' ' + esc(th.label) : '🏁 Final', '🤝 Tied: ' + tb.ids.length) +
-      '<div class="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + qhtml + '</div></div>' + extra + '</div></div></div>';
-    var priv = tb.kind === 'number' && !r ? '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream until you reveal</div><div class="ans">' + esc(fmtAns(Q)) + '</div></div>' : '';
-    var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">🤝 Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="grow"></span></div>' + priv + '<div class="sc-tb">' + inner + '</div></div>';
+  /* Tiebreaker: question, tied names and (after the reveal) the result are shown inside the box */
+  function renderStreamTie(app, g, tb, Q, th, inner, byId) {
+    var r = tb.revealed ? tb.result : null;
+    var names = tb.ids.map(function (id) { return esc(byId(id).name); }).join(' \u00B7 ');
+    var rows = r ? '<div class="sb-hint"><b>Answer</b> ' + esc(fmtAns(Q)) + '</div><div class="sb-board">' + r.rows.map(function (x) {
+      var win = r.winners.indexOf(x.id) !== -1;
+      return '<div class="sb-row' + (win ? ' first' : '') + '"><b>' + (win ? '\uD83D\uDC51' : '') + '</b><span class="n">' + esc(x.name) + '</span><span class="s">' + (x.diff === null ? '\u2013' : esc(String(x.guess))) + '</span></div>'; }).join('') + '</div>' +
+      '<div class="sb-status">' + (r.winners.length === 1 ? '\uD83C\uDFC6 ' + esc(byId(r.winners[0]).name) + ' wins!' : '\uD83E\uDD1D Still tied!') + '</div>' : '<div class="sb-hint"><b>Closest number wins</b> ' + names + '</div>';
+    var box = '<div class="sbox" id="sbox"><div class="sb-in">' + streamHead('Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : ''), th.icon + ' ' + esc(th.label), '\uD83E\uDD1D Tied: ' + tb.ids.length) +
+      '<div class="sb-body"><div class="sb-qwrap"><div class="sb-q" id="sb-q">' + esc(Q.question) + '</div></div>' + rows + '</div></div></div>';
+    var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">\uD83E\uDD1D Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="grow"></span></div>' +
+      (r ? '' : '<div class="sc-ans"><div class="help">\uD83D\uDD12 Private answer \u2013 not shown on stream until you reveal</div><div class="ans">' + esc(fmtAns(Q)) + '</div></div>') +
+      '<div class="sc-tb">' + inner + '</div></div>';
     var keepVals = {}; [].forEach.call(document.querySelectorAll('.tb-in'), function (e) { keepVals[e.dataset.id] = e.value; });
     streamLayout(app, box, ctl);
     [].forEach.call(document.querySelectorAll('.tb-in'), function (e) { if (keepVals[e.dataset.id] && !e.value) e.value = keepVals[e.dataset.id]; });
@@ -416,133 +411,83 @@
     return '<div class="tie-banner"><b>\uD83E\uDD1D It\u2019s a tie for first!</b><span>' + esc(Core.joinNames(t.map(function (p) { return p.name; }))) + ' on ' + t[0].score + ' pts</span><button class="btn yellow" data-act="tb-start">\u26A1 Play tiebreaker</button></div>';
   }
   var tbUsed = App.store.get('tbused', []);
-  /* Two kinds of tiebreaker, chosen by the host: 'normal' = a random normal question from any theme (first correct answer wins),
-     'number' = a closest-number question (closest wins). */
   function tbPick(g) {
-    var tb = g.tb;
-    if (tb.kind === 'number') {
-      var qn = Core.pickTiebreaker(window.TIEBREAKERS || [], tbUsed, (g.setup && g.setup.themes) || []);
-      if (!qn) { App.toast('No tiebreaker questions loaded'); return false; }
-      tbUsed.push(qn.id); App.store.set('tbused', tbUsed.slice(-400)); tb.qid = qn.id;
-    } else {
-      var used = App.used || [], bank = window.QUESTION_BANK || [];
-      var ok = function (x) { return tbUsed.indexOf(x.id) === -1 && used.indexOf(x.id) === -1 && x.id !== tb.qid; };
-      var pool = bank.filter(function (x) { return x.difficulty === 'medium' && ok(x); });
-      if (!pool.length) pool = bank.filter(ok);
-      if (!pool.length) { App.toast('No tiebreaker questions left'); return false; }
-      var qx = pool[Math.floor(Math.random() * pool.length)];
-      tbUsed.push(qx.id); App.store.set('tbused', tbUsed.slice(-400)); App.markUsed(qx.id); tb.qid = qx.id;
-    }
-    tb.revealed = false; tb.result = null; tb.guesses = {}; tb.winner = null;
+    var themes = (g.setup && g.setup.themes) || [];
+    var qn = Core.pickTiebreaker(window.TIEBREAKERS || [], tbUsed, themes);
+    if (!qn) { App.toast('No tiebreaker questions loaded'); return false; }
+    tbUsed.push(qn.id); App.store.set('tbused', tbUsed.slice(-400));
+    g.tb.qid = qn.id; g.tb.revealed = false; g.tb.result = null; g.tb.guesses = {};
     return true;
   }
   function fmtAns(Q) { return Q.unit === 'year' ? String(Q.answer) : Q.answer.toLocaleString('en-GB') + (Q.unit ? ' ' + Q.unit : ''); }
-  function tbQ(g) {
-    if (!g.tb || !g.tb.kind || !g.tb.qid) return null;
-    return g.tb.kind === 'number' ? (window.TIEBREAKERS || []).filter(function (x) { return x.id === g.tb.qid; })[0] : BY_ID[g.tb.qid];
-  }
-  function tbAnswer(g, Q) { return g.tb.kind === 'number' ? fmtAns(Q) : Q.answer; }
-  function tbPlayer(g, id) { return g.host.players.filter(function (x) { return x.id === id; })[0]; }
+  function tbQ(g) { return (window.TIEBREAKERS || []).filter(function (x) { return x.id === g.tb.qid; })[0]; }
   App.actions['tb-start'] = function () {
     var g = App.game, tied = topTied(g); if (!tied.length) return;
-    g.tb = { ids: tied.map(function (p) { return p.id; }), round: 1, kind: null };
+    g.tb = { ids: tied.map(function (p) { return p.id; }), round: 1 };
+    if (!tbPick(g)) { g.tb = null; return; }
     [].forEach.call(document.querySelectorAll('.confetti'), function (n) { n.remove(); });
     App.unrecordGame(g); App.view = 'tiebreak'; App.resetScroll = true; App.save(); App.render();
   };
-  /* choose the kind of tiebreaker question */
-  App.actions['tb-kind'] = function (el) {
-    var g = App.game, tb = g.tb; if (!tb) return;
-    tb.kind = el.dataset.v === 'number' ? 'number' : 'normal'; tb.qid = null;
-    if (!tbPick(g)) { tb.kind = null; return; }
-    App.save(); App.render();
-  };
-  App.actions['tb-change'] = function () { var g = App.game; if (g.tb && !g.tb.revealed) { g.tb.kind = null; g.tb.qid = null; App.save(); App.render(); } };
-  App.actions['tb-new'] = function () { var g = App.game; if (g.tb && g.tb.kind && !g.tb.revealed && tbPick(g)) { App.save(); App.render(); } };
-  /* normal question: tap the player who answered correctly first */
-  App.actions['tb-win'] = function (el) {
-    var g = App.game, tb = g.tb, p = tb && tb.kind === 'normal' && !tb.revealed && tbPlayer(g, el.dataset.id); if (!p) return;
-    p.tb = (p.tb || 0) + 1; tb.winner = p.id; tb.revealed = true; App.save(); App.render();
-  };
-  App.actions['tb-undo'] = function () {
-    var g = App.game, tb = g.tb; if (!tb || !tb.revealed || tb.kind !== 'normal') return;
-    var p = tbPlayer(g, tb.winner); if (p && p.tb) p.tb--;
-    tb.winner = null; tb.revealed = false; App.save(); App.render();
-  };
-  /* number question: closest wins */
+  App.actions['tb-new'] = function () { var g = App.game; if (g.tb && !g.tb.revealed && tbPick(g)) { App.save(); App.render(); } };
   App.actions['tb-reveal'] = function () {
-    var g = App.game, tb = g.tb, Q = tbQ(g); if (!tb || tb.revealed || tb.kind !== 'number') return;
+    var g = App.game, tb = g.tb, Q = tbQ(g); if (!tb || tb.revealed) return;
     var entries = tb.ids.map(function (id) {
-      var p = tbPlayer(g, id), inp = document.querySelector('.tb-in[data-id="' + id + '"]');
+      var p = g.host.players.filter(function (x) { return x.id === id; })[0], inp = document.querySelector('.tb-in[data-id="' + id + '"]');
       tb.guesses[id] = inp ? inp.value : (tb.guesses[id] || '');
       return { id: id, name: p.name, guess: tb.guesses[id] };
     });
     var res = Core.tiebreakRound(entries, Q.answer);
     if (res.noGuesses) { App.toast('Type at least one number first'); return; }
     tb.result = res; tb.revealed = true;
-    if (res.winners.length < tb.ids.length) res.winners.forEach(function (id) { var p = tbPlayer(g, id); p.tb = (p.tb || 0) + 1; });
+    if (res.winners.length < tb.ids.length) res.winners.forEach(function (id) { var p = g.host.players.filter(function (x) { return x.id === id; })[0]; p.tb = (p.tb || 0) + 1; });
     App.save(); App.render();
   };
   App.actions['tb-again'] = function () {
-    var g = App.game, tb = g.tb; if (!tb || !tb.revealed || tb.kind !== 'number') return;
+    var g = App.game, tb = g.tb; if (!tb || !tb.revealed) return;
     tb.ids = tb.result.winners.length ? tb.result.winners.slice() : tb.ids; tb.round++;
     if (tbPick(g)) { App.save(); App.render(); }
   };
   App.actions['tb-finish'] = function () { var g = App.game; g.tb = null; App.view = 'results'; App.resetScroll = true; App.save(); App.render(); };
   App.actions['tb-copy-q'] = function () {
-    var g = App.game, Q = tbQ(g);
-    App.copy(Core.fitComment('Tiebreaker: ' + (g.tb.kind === 'number' ? 'closest number wins! ' : '') + Q.question), 'tiebreaker');
+    var g = App.game, Q = tbQ(g), names = g.tb.ids.map(function (id) { return g.host.players.filter(function (x) { return x.id === id; })[0].name; });
+    var full = 'Tiebreaker for first place between ' + Core.joinNames(names) + '! Closest answer wins. ' + Q.question;
+    if (full.length > 150) full = 'Tiebreaker! Closest answer wins. ' + Q.question;
+    App.copy(Core.fitComment(full), 'tiebreaker');
   };
   App.actions['tb-copy-r'] = function () {
-    var g = App.game, tb = g.tb, Q = tbQ(g), txt;
-    if (tb.kind === 'normal') { var w1 = tb.winner && tbPlayer(g, tb.winner); if (!w1) return; txt = 'CORRECT! The answer is ' + Q.answer + '. ' + w1.name + ' wins the tiebreaker!'; }
-    else {
-      var r = tb.result, ans = fmtAns(Q), w = r.winners.map(function (id) { return r.rows.filter(function (x) { return x.id === id; })[0]; });
-      txt = r.winners.length === 1
-        ? 'The answer is ' + ans + '! Closest was ' + w[0].name + ' with ' + w[0].guess + '. ' + w[0].name + ' wins the tiebreaker!'
-        : 'The answer is ' + ans + '! ' + Core.joinNames(w.map(function (x) { return x.name; })) + ' were equally close. Still a tie!';
-    }
+    var g = App.game, tb = g.tb, Q = tbQ(g), r = tb.result, ans = fmtAns(Q);
+    var w = r.winners.map(function (id) { return r.rows.filter(function (x) { return x.id === id; })[0]; });
+    var txt = r.winners.length === 1
+      ? 'The answer is ' + ans + '! Closest was ' + w[0].name + ' with ' + w[0].guess + '. ' + w[0].name + ' wins the tiebreaker!'
+      : 'The answer is ' + ans + '! ' + Core.joinNames(w.map(function (x) { return x.name; })) + ' were equally close. Still a tie!';
     App.copy(Core.fitComment(txt), 'tiebreaker result');
   };
   App.renderTiebreak = function (app) {
-    var g = App.game, tb = g.tb;
-    if (!tb) { App.view = 'results'; return App.render(); }
-    var Q = tbQ(g), th = Q ? (window.THEMES[Q.theme] || window.THEMES.general) : window.THEMES.general;
-    App.setBackdrop(Q ? Q.theme : 'general', 0);
-    var names = tb.ids.map(function (id) { return esc(tbPlayer(g, id).name); });
-    var inner, winner = tb.winner && tbPlayer(g, tb.winner);
-    if (!tb.kind) {
-      inner = '<p class="help">' + names.join(' · ') + ' are tied. Pick the tiebreaker question type:</p>' +
-        '<div class="tb-pick"><button class="btn primary big" data-act="tb-kind" data-v="normal">🧠 Normal question<br><small>First correct answer wins</small></button>' +
-        '<button class="btn yellow big" data-act="tb-kind" data-v="number">🔢 Number question<br><small>Closest number wins</small></button></div>' +
-        '<div class="row" style="margin-top:.6em"><button class="btn" data-act="tb-finish">Keep joint win</button></div>';
-    } else if (tb.kind === 'normal' && !tb.revealed) {
-      inner = '<div class="answerbox"><span class="help" style="margin:0">Answer (private)</span><div class="ans">' + esc(Q.answer) + '</div></div>' +
-        '<p class="help">First correct answer wins. Tap who got it first:</p>' +
-        '<div class="tb-pick">' + tb.ids.map(function (id) { return '<button class="btn primary big" data-act="tb-win" data-id="' + id + '">✅ ' + esc(tbPlayer(g, id).name) + '</button>'; }).join('') + '</div>' +
-        '<div class="row" style="margin-top:.5em"><button class="btn" data-act="tb-copy-q">📋 Copy question</button><button class="btn" data-act="tb-new">🔄 Nobody got it – new question</button><button class="btn" data-act="tb-change">Change type</button></div>';
-    } else if (tb.kind === 'normal') {
-      inner = '<div class="answerbox"><span class="help" style="margin:0">Answer</span><div class="ans">' + esc(Q.answer) + '</div></div>' +
-        '<p class="tie-win">🏆 ' + esc(winner.name) + ' wins the tiebreaker!</p>' +
-        '<div class="row" style="margin-top:.6em"><button class="btn" data-act="tb-copy-r">📋 Copy result</button><button class="btn" data-act="tb-undo">↩ Change winner</button><button class="btn primary grow" data-act="tb-finish">See final leaderboard →</button></div>';
-    } else if (!tb.revealed) {
+    var g = App.game, tb = g.tb, Q = tb && tbQ(g);
+    if (!Q) { App.view = 'results'; return App.render(); }
+    var th = window.THEMES[Q.theme] || window.THEMES.general;
+    App.setBackdrop(Q.theme, 0);
+    var byId = function (id) { return g.host.players.filter(function (x) { return x.id === id; })[0]; };
+    var inner;
+    if (!tb.revealed) {
       inner = '<p class="help">Everyone types a number. Closest wins.</p>' +
-        tb.ids.map(function (id) { return '<div class="tb-row"><span class="lb-name">' + esc(tbPlayer(g, id).name) + '</span><input class="tb-in" data-id="' + id + '" inputmode="decimal" autocomplete="off" placeholder="Number" value="' + esc(tb.guesses[id] || '') + '"></div>'; }).join('') +
-        '<div class="row" style="margin-top:.7em"><button class="btn primary big grow" data-act="tb-reveal">🔍 Reveal answer</button></div>' +
-        '<div class="row" style="margin-top:.4em"><button class="btn" data-act="tb-copy-q">📋 Copy question</button><button class="btn" data-act="tb-new">🔄 Different question</button><button class="btn" data-act="tb-change">Change type</button></div>';
+        tb.ids.map(function (id) { return '<div class="tb-row"><span class="lb-name">' + esc(byId(id).name) + '</span><input class="tb-in" data-id="' + id + '" inputmode="decimal" autocomplete="off" placeholder="Number" value="' + esc(tb.guesses[id] || '') + '"></div>'; }).join('') +
+        '<div class="row" style="margin-top:.7em"><button class="btn primary big grow" data-act="tb-reveal">\uD83D\uDD0D Reveal answer</button></div>' +
+        '<div class="row" style="margin-top:.4em"><button class="btn" data-act="tb-copy-q">\uD83D\uDCCB Copy question</button><button class="btn" data-act="tb-new">\uD83D\uDD04 Different question</button></div>';
     } else {
       var r = tb.result, ans = fmtAns(Q);
       inner = '<div class="answerbox"><span class="help" style="margin:0">Answer</span><div class="ans">' + esc(ans) + '</div></div>' +
         r.rows.map(function (x) {
           var win = r.winners.indexOf(x.id) !== -1;
-          return '<div class="tb-row' + (win ? ' win' : '') + '"><span class="lb-name">' + (win ? '👑 ' : '') + esc(x.name) + '</span><span>' + (x.diff === null ? 'no number' : esc(String(x.guess)) + ' (off by ' + x.diff.toLocaleString('en-GB') + ')') + '</span></div>';
+          return '<div class="tb-row' + (win ? ' win' : '') + '"><span class="lb-name">' + (win ? '\uD83D\uDC51 ' : '') + esc(x.name) + '</span><span>' + (x.diff === null ? 'no number' : esc(String(x.guess)) + ' (off by ' + x.diff.toLocaleString('en-GB') + ')') + '</span></div>';
         }).join('') +
-        (r.winners.length === 1 ? '<p class="tie-win">🏆 ' + esc(tbPlayer(g, r.winners[0]).name) + ' wins the tiebreaker!</p>' : '<p class="tie-win">🤝 Still tied!</p>') +
-        '<div class="row" style="margin-top:.6em"><button class="btn" data-act="tb-copy-r">📋 Copy result</button>' +
-        (r.winners.length === 1 ? '<button class="btn primary grow" data-act="tb-finish">See final leaderboard →</button>' : '<button class="btn primary grow" data-act="tb-again">⚡ Another tiebreaker</button><button class="btn" data-act="tb-finish">Keep joint win</button>') + '</div>';
+        (r.winners.length === 1 ? '<p class="tie-win">\uD83C\uDFC6 ' + esc(byId(r.winners[0]).name) + ' wins the tiebreaker!</p>' : '<p class="tie-win">\uD83E\uDD1D Still tied!</p>') +
+        '<div class="row" style="margin-top:.6em"><button class="btn" data-act="tb-copy-r">\uD83D\uDCCB Copy result</button>' +
+        (r.winners.length === 1 ? '<button class="btn primary grow" data-act="tb-finish">See final leaderboard \u2192</button>' : '<button class="btn primary grow" data-act="tb-again">\u26A1 Another tiebreaker</button><button class="btn" data-act="tb-finish">Keep joint win</button>') + '</div>';
     }
-    if (g.stream) { renderStreamTie(app, g, tb, Q, th, inner); return; }
-    app.innerHTML = '<div class="v-play">' + App.hud() + '<div class="zone"><div class="qwrap"><div class="qcard"><div class="qhead"><span class="pill">🤝 Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span>' + (Q ? '<span class="pill">' + th.icon + ' ' + esc(th.label) + '</span>' : '') + '</div>' +
-      (Q ? '<h2 class="qtext" id="qtext">' + esc(Q.question) + '</h2>' : '<h2 class="qtext" id="qtext">It’s a tie for first!</h2>') + inner + '</div></div></div></div>';
+    if (g.stream) { renderStreamTie(app, g, tb, Q, th, inner, byId); return; }
+    app.innerHTML = '<div class="v-play">' + App.hud() + '<div class="zone"><div class="qwrap"><div class="qcard"><div class="qhead"><span class="pill">\uD83E\uDD1D Tiebreaker' + (tb.round > 1 ? ' ' + tb.round : '') + '</span><span class="pill">' + th.icon + ' ' + esc(th.label) + '</span><span class="pill pts">Closest wins</span></div>' +
+      '<h2 class="qtext" id="qtext">' + esc(Q.question) + '</h2>' + inner + '</div></div></div></div>';
   };
   App.renderResults = function (app) {
     var g = App.game; clearInterval(tick);
