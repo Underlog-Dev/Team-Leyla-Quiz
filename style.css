@@ -298,3 +298,102 @@ body.streamer.streamer #app{position:static;inset:auto;max-width:none;margin:0;p
 
 /* question alone: sit a little higher, in the art's gap; hint/options/answer take the space back */
 .sb-body.soloq .sb-qwrap{padding-bottom:44cqw}
+
+/* =====================  RIDDLES (green theme)  ===================== */
+body.riddle{--purple:#1f9d4a;--purple-d:#0f5a2a;--purple-l:#d8f5df;--ink:#10301c;--muted:#3d6b4d;--night:#04200f}
+body.riddle .btn.primary{background:linear-gradient(#3fcf6b,#1f9d4a);box-shadow:0 4px 0 #0f5a2a;color:#fff}
+body.riddle .glass{background:rgba(4,32,15,.84);border-color:rgba(80,255,120,.6);box-shadow:0 0 24px rgba(60,255,110,.35)}
+body.riddle .glass .help,body.riddle .on-dark .help{color:#bff0cc}
+body.riddle .home-links .btn,body.riddle .minor .btn{background:rgba(4,32,15,.82);box-shadow:inset 0 0 0 2px rgba(80,255,120,.6)}
+body.riddle .setup-actions .help,body.riddle .setup-actions .notice{background:rgba(4,32,15,.86)}
+body.riddle .qcard{background:rgba(5,34,17,.9);color:#fff;border:2px solid rgba(80,255,120,.6);box-shadow:0 0 26px rgba(60,255,110,.35)}
+body.riddle .qcard .qtext,body.riddle .qcard .help{color:#fff}
+body.riddle .qcard .hintbox{background:rgba(255,217,61,.2);color:#fff4bf;border:1px dashed #ffd93d}
+body.riddle .qcard .answerbox{background:rgba(255,255,255,.1);color:#fff}
+body.riddle .qcard .answerbox.revealed{background:rgba(46,204,113,.28)}
+body.riddle .qcard .answerbox .ans{color:#9dffbf}
+body.riddle .qcard .btn:not(.primary):not(.yellow){background:rgba(255,255,255,.95);color:#10301c}
+body.riddle .qcard .btn.on{background:#ffd93d;color:#10301c}
+body.riddle .qcard input[type=text]{border-color:#3fcf6b}
+body.riddle .qcard .timer{color:#ffd93d;font-size:1.4em}
+body.riddle .qcard .timer.low{color:#ff7a8a}
+body.riddle .qcard .feedback.ok{color:#9dffbf}body.riddle .qcard .feedback.bad{color:#ff9aa8}
+body.riddle .pill{background:#d8f5df;color:#0f5a2a}body.riddle .pill.pts{background:var(--yellow);color:#2b2140}
+body.riddle .rtext{font-size:clamp(1.25rem,5vw,1.9rem)}
+body.riddle .drawer{background:rgba(4,32,15,.96)}
+body.riddle .chip[aria-pressed=true]{background:var(--yellow);color:#2b2140}
+body.riddle .modal,body.riddle .pop{color:var(--ink)}
+body.riddle .lb-item{background:rgba(255,255,255,.1)}
+.rbig{font-size:1.25em;margin:.3em 0;color:#fff}
+body.streamer.riddle{background:#04200f}
+body.streamer.riddle .sctl{background:rgba(255,255,255,.06);border-color:rgba(80,255,120,.3)}
+body.streamer.riddle .sc-ans{border-color:#3fcf6b}
+body.streamer.riddle .v-stream .lbl,body.riddle .v-stream .lbl{color:#9dffbf}
+.sb-h{margin-top:.5cqw;text-align:left}
+.sbox.rplay .sb-in{padding:12cqh 13cqw 21cqh 13cqw}
+.sbox.rplay .sb-head{font-size:3.7cqw}.sbox.rplay .sb-sub{font-size:3cqw}
+.sbox.framed.rsetup .sb-in{padding:25cqh 16cqw 31cqh 16cqw}
+.sbox.framed.rleader .sb-in{padding:28cqh 14cqw 31cqh 14cqw}
+.sbox.rplay .sb-head,.sbox.framed.rsetup .sb-head,.sbox.framed.rleader .sb-head{display:flex}
+.sbox.framed.rsetup .sb-head,.sbox.framed.rsetup .sb-sub,.sbox.framed.rleader .sb-head,.sbox.framed.rleader .sb-sub{display:none}
+.sbox.rplay .sb-body.soloq .sb-qwrap{padding-bottom:12cqh}
+.sbox.rplay .sb-q,.sbox.rplay .sb-hint,.sbox.rplay .sb-reveal{background:rgba(3,28,12,.82)}
+.sbox.rplay .sb-hint{border-color:#ffd93d}
+
+/* mode selection screen: invisible hit areas sit exactly on the artwork's own Quiz / Riddles buttons */
+.v-mode .hit{position:absolute;background:transparent;border-radius:999px;z-index:2;transition:box-shadow .15s,transform .1s}
+.v-mode .hit:hover,.v-mode .hit:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.7),0 0 26px rgba(255,255,255,.55)}
+.v-mode .hit:active{transform:scale(.98)}
+.v-rhome .zone .play-btn{background:linear-gradient(#ffe36b,var(--yellow))}
+
+/* wide layout */
+@media (min-width:560px) and (orientation:landscape){
+  .v-mode .hit-quiz{left:35.9%;top:45.2%;width:30.4%;height:13%}
+  .v-mode .hit-riddles{left:35.9%;top:61.4%;width:30.8%;height:13.2%}
+  .v-rhome .zone{left:36%;right:36%;top:45%;bottom:20%;display:flex;flex-direction:column;justify-content:center}
+  .v-rsetup .zone{left:27%;right:19%;top:35.5%;bottom:30.5%}
+  .v-rsetup .setup-actions{position:absolute;left:30%;right:20%;bottom:21%;height:8%;margin:0;padding:0 .6em;z-index:3}
+  .v-rleader .zone{left:27%;right:17%;top:38%;bottom:25%}
+  .v-rplay .zone{left:22%;right:19%;top:15%;bottom:17%;display:flex;flex-direction:column;justify-content:center}
+  .v-rsetup .glass,.v-rleader .glass{background:none;border:none;box-shadow:none;padding:.3em .6em;height:100%;overflow:hidden;display:flex;flex-direction:column}
+  .v-rleader .lb-scroll{flex:1;min-height:0}
+  .v-rsetup .setup-grid{grid-template-columns:1fr 1fr;flex:1;min-height:0}
+  .v-rsetup .setup-grid .col{overflow:auto;padding-right:.3em}
+  .v-rsetup .lbl{margin:.45em 0 .2em}
+  .v-rsetup .chip{padding:.25em .6em;min-height:2em;font-size:.88em}
+  .v-rplay .qtext{font-size:1.9em}
+  .v-rplay .qcard{padding:.8em 1em;max-height:100%;overflow:auto}
+  .v-rplay .drawer{position:absolute;top:7%;bottom:7%;width:27%}
+  .v-rplay .drawer-tab{top:5em;bottom:auto}
+}
+/* portrait layout (phones held upright), zones follow the art's blank frame */
+@media (orientation:portrait){
+  .v-mode .hit-quiz{left:calc(var(--ax,0px) + var(--aw,100vw)*.2);top:calc(var(--ay,0px) + var(--ah,100vh)*.378);width:calc(var(--aw,100vw)*.575);height:calc(var(--ah,100vh)*.097)}
+  .v-mode .hit-riddles{left:calc(var(--ax,0px) + var(--aw,100vw)*.218);top:calc(var(--ay,0px) + var(--ah,100vh)*.493);width:calc(var(--aw,100vw)*.612);height:calc(var(--ah,100vh)*.1)}
+  .v-rhome .zone{left:calc(var(--ax,0px) + var(--aw,100vw)*.12);top:calc(var(--ay,0px) + var(--ah,100vh)*.385);width:calc(var(--aw,100vw)*.76);height:auto;right:auto;bottom:auto;overflow:visible;display:flex;flex-direction:column}
+  .v-rhome .play-btn{font-size:1.4em;margin:.2em auto .5em}
+  .v-rhome .home-links{width:54%;margin-left:auto;flex-direction:column;align-items:stretch}
+  .v-rsetup .zone{left:calc(var(--ax,0px) + var(--aw,100vw)*.165);top:calc(var(--ay,0px) + var(--ah,100vh)*.245);width:calc(var(--aw,100vw)*.67);height:calc(var(--ah,100vh)*.36);right:auto;bottom:auto;overscroll-behavior:contain}
+  .v-rsetup .setup-actions{position:absolute;left:calc(var(--ax,0px) + var(--aw,100vw)*.48);top:calc(var(--ay,0px) + var(--ah,100vh)*.675);width:calc(var(--aw,100vw)*.36);flex-direction:column;align-items:stretch;margin:0;padding:0;gap:.3em;background:none;z-index:5}
+  .v-rsetup .setup-actions .btn{width:100%;padding-inline:.3em;white-space:nowrap}
+  .v-rsetup .setup-actions .help,.v-rsetup .setup-actions .notice{align-self:center;text-align:center;border-radius:999px;padding:.15em .8em;font-size:.8em}
+  .v-rleader .zone{left:calc(var(--ax,0px) + var(--aw,100vw)*.13);top:calc(var(--ay,0px) + var(--ah,100vh)*.275);width:calc(var(--aw,100vw)*.74);height:calc(var(--ah,100vh)*.34);right:auto;bottom:auto;overscroll-behavior:contain}
+  .v-rplay .zone{left:calc(var(--ax,0px) + var(--aw,100vw)*.09);top:calc(var(--ay,0px) + var(--ah,100vh)*.115);width:calc(var(--aw,100vw)*.82);height:calc(var(--ah,100vh)*.72);right:auto;bottom:auto;display:flex;flex-direction:column;overscroll-behavior:contain}
+  .v-rsetup .glass,.v-rleader .glass{background:none;border:none;box-shadow:none;padding:.2em .3em}
+  .v-rplay .qcard{max-height:none;overflow:visible}
+  .v-rplay .zone>.qwrap{margin:auto 0}
+  .v-rsetup .setup-grid{grid-template-columns:1fr}
+}
+/* riddle results: scroll the list, keep the buttons visible */
+.v-rres .zone{overflow:hidden}
+.v-rres .glass{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.v-rres .rres-scroll{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.v-rres .rres-actions{flex:0 0 auto}
+.v-rres .tie-banner{margin:.3em 0}
+.hintbox>span{flex:1 1 auto;min-width:0}
+.hintbox .copydot{flex:0 0 auto}
+@media (orientation:portrait){ .v-rres .zone{height:calc(var(--ah,100vh)*.36)} }
+.sbox.rplay .sb-head{font-size:3.1cqw;padding:1.2cqw 2.6cqw}
+.sbox.rplay .sb-head span,.sbox.rplay .sb-sub span{white-space:nowrap}
+.sbox.rplay .sb-sub{font-size:2.8cqw}
+.sbox.framed.rsetup .sb-in{padding:25cqh 16cqw 39cqh 16cqw}

@@ -478,7 +478,26 @@
     };
   }
 
+  /* ---------- riddles ---------- */
+  /* points: base by difficulty (or flat), minus 1 per extra hint used, never below 1 */
+  function riddlePoints(difficulty, hintsUsed, flat) {
+    var base = flat > 0 ? flat : (BASE_POINTS[difficulty] || 1);
+    return Math.max(1, base - Math.max(0, hintsUsed || 0));
+  }
+  function riddleCopy(n, total, text) { return fitComment('Riddle ' + n + ': ' + cleanForTTS(text)); }
+  function riddleAnswerCopy(n, total, answer) {
+    return fitComment(n >= total ? 'CORRECT! The answer is ' + cleanForTTS(answer) + '. That\u2019s the end of the riddles!' : 'CORRECT! The answer is ' + cleanForTTS(answer) + '. Onto riddle ' + (n + 1));
+  }
+  function riddleHintCopy(n, k, hint) { return fitComment('Hint ' + k + ' for riddle ' + n + ': ' + cleanForTTS(hint)); }
+  function buildRiddles(bank, difficulty, count, usedIds, rng) {
+    var ds = Array.isArray(difficulty) ? difficulty : (difficulty && difficulty !== 'mixed' ? [difficulty] : DIFFICULTIES);
+    var used = toSet(usedIds);
+    var pool = shuffle(bank.filter(function (r) { return !used[r.id] && ds.indexOf(r.difficulty) !== -1; }), rng);
+    return { riddles: pool.slice(0, count), shortfall: Math.max(0, count - pool.length), available: pool.length };
+  }
+
   return {
+    riddlePoints: riddlePoints, riddleCopy: riddleCopy, riddleAnswerCopy: riddleAnswerCopy, riddleHintCopy: riddleHintCopy, buildRiddles: buildRiddles,
     BASE_POINTS: BASE_POINTS, DIFFICULTIES: DIFFICULTIES, DEFAULT_TEMPLATES: DEFAULT_TEMPLATES,
     availablePoints: availablePoints, ordinal: ordinal,
     questionCopy: questionCopy, answerCopy: answerCopy, hintCopy: hintCopy,
