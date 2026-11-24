@@ -169,8 +169,8 @@
     var h = '';
     /* 🏠 = the game's own home (quiz home / riddles home); 🎮 = Game Night, the main home screen */
     if (v !== 'mode' && v !== 'home' && v !== 'rhome' && !hv) h += '<button class="icon-btn" data-act="' + (rv ? 'r-home' : 'go-home') + '" aria-label="Game home">🏠</button>';
-    if (v !== 'mode') h += '<button class="icon-btn" data-act="go-mode" aria-label="Game Night - choose a game">🎮</button>';
-    if (v === 'mode' && !App.embed) h += '<button class="icon-btn" data-act="open-stream-shell" aria-label="Streamer mode - whole site in the capture box">🎥</button>';
+    if (v !== 'mode') h += '<button class="icon-btn txt" data-act="go-mode" aria-label="Back to the game menu">🎮 Menu</button>';
+    if (!App.embed) h += '<button class="icon-btn" data-act="open-stream-shell" aria-label="Streamer mode: switch on">🎥</button>';
     var stats = (rv && v !== 'mode') ? 'r-stats' : hv ? 'h-stats' : 'open-stats';
     return '<div class="hud">' + (extra || '') + h +
       '<button class="icon-btn" data-act="' + stats + '" aria-label="Statistics">📊</button>' +

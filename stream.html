@@ -8,7 +8,7 @@
 <script>
 (function(){
   var f=document.getElementById('game'), side=document.getElementById('side'), toastEl=document.getElementById('toast'), tt;
-  var IDLE='<div class="shell-top"><a class="btn small" href="index.html">⬅ Leave streamer mode</a></div><div class="shell-note"><h2>🎥 Streamer mode</h2>Add this page to <b>TikTok LIVE Studio</b> and capture <b>only the gold-edged box</b>. Everything inside it is what viewers see – use the game screens in the box to pick a game and set it up. When a game is running, your <b>private controls appear here</b> (answers, buttons, copy). Everything outside the box stays private.</div>';
+  var TOP='<div class="shell-top" id="top"><button class="btn primary menu" data-shell="menu">🎮 Return to menu</button><a class="btn small cam" href="index.html" title="Switch streamer mode off">🎥 Streamer ON – tap to switch off</a></div>';var IDLE=TOP+'<div class="shell-note"><h2>🎥 Streamer mode</h2>Add this page to <b>TikTok LIVE Studio</b> and capture <b>only the gold-edged box</b>. Everything inside it is what viewers see – use the game screens in the box to pick a game and set it up. When a game is running, your <b>private controls appear here</b> (answers, buttons, copy). Everything outside the box stays private.</div>';
   function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){toastEl.classList.remove('show')},1800)}
   function copy(t){var ok=false;try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t);ok=true}}catch(e){}
     if(!ok){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove()}}
@@ -18,14 +18,14 @@
     if(ev.origin!==location.origin||ev.source!==f.contentWindow||!ev.data)return; var m=ev.data;
     if(m.t==='ctl'){
       var had=document.activeElement&&document.activeElement.id, val=had&&document.activeElement.value;
-      side.innerHTML='<div class="shell-top"><a class="btn small" href="index.html">⬅ Leave streamer mode</a></div>'+(m.html||'<div class="shell-note">Nothing private on this screen – use the box.</div>');
+      side.innerHTML=TOP+(m.html||'<div class="shell-note">Nothing private on this screen – use the box.</div>');
       var cls=(m.cls||'').split(/\s+/).filter(function(c){return c&&c!=='embedded'}); document.body.className='shell '+cls.join(' ');
       if(had){var e=document.getElementById(had);if(e&&'value' in e){e.value=val;try{e.focus()}catch(x){}}}
       if(!m.html) side.innerHTML=IDLE;
     } else if(m.t==='toast') toast(m.msg);
     else if(m.t==='copy') copy(m.text);
   });
-  side.addEventListener('click',function(ev){var el=ev.target.closest('[data-act]');if(!el)return;ev.preventDefault();send(el.dataset.act,Object.assign({},el.dataset),values())});
+  side.addEventListener('click',function(ev){var sm=ev.target.closest('[data-shell=menu]');if(sm){ev.preventDefault();send('go-mode',{},{});return}var el=ev.target.closest('[data-act]');if(!el)return;ev.preventDefault();send(el.dataset.act,Object.assign({},el.dataset),values())});
   side.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.dataset&&ev.target.dataset.enter){ev.preventDefault();send(ev.target.dataset.enter,Object.assign({},ev.target.dataset),values())}});
   side.innerHTML=IDLE;
 })();
