@@ -267,3 +267,5 @@ body.streamer.streamer #app{position:static;inset:auto;max-width:none;margin:0;p
 .sb-win{display:block;font-size:.62em;color:#ffd93d;margin-top:.8cqw}
 .sc-nav .btn{width:auto;flex:0 0 auto}.sc-nav .btn.grow{flex:1 1 auto}
 .sc-nav .btn[disabled]{opacity:.45}
+.tb-pick{display:grid;gap:8px;margin-top:8px}
+.tb-pick .btn small{display:block;font-weight:600;opacity:.85;margin-top:2px}
