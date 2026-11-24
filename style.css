@@ -577,3 +577,15 @@ body.shell{margin:0;min-height:100dvh;overflow:auto}
 .shell-top{display:flex;gap:.5em;align-items:center;margin-bottom:.5em}
 @media (max-width:820px){.shell-wrap{flex-direction:column;align-items:center}.shell-box{--sbh:min(62dvh,calc((100vw - 24px) * 16 / 9))}.shell-side{flex:none;width:100%;max-height:none}}
 .v-hsetup .hm-tray,.v-hres .hm-tray,.v-hleader .hm-tray{flex-direction:row;flex-wrap:wrap;align-content:center}
+
+/* hangman: host typing placeholder, tidier letter grid in the stream box */
+.hm-typing{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.4em;min-height:9em;color:#1448d8;font-weight:800}
+.hm-typing .hm-big{font-size:1.5em;line-height:1.15}.hm-typing p{margin:0;color:#3a58b8;font-weight:700}
+.sbox.hm .hm-typing{height:100%;gap:1.5cqw}.sbox.hm .hm-typing .hm-big{font-size:7cqw}.sbox.hm .hm-typing p{font-size:4cqw}
+.sbox.hm .sb-in{padding:27cqh 15cqw 38.5cqh 15cqw}
+.sbox.hm .hm-main{gap:1.5cqw;overflow:hidden}
+.sbox.hm .hm-img{max-width:42%;object-fit:contain}
+.sbox.hm .hm-abc{grid-template-columns:repeat(6,minmax(0,1fr));gap:.6cqw;min-width:0}
+.sbox.hm .hm-abc span{font-size:3.4cqw;min-width:0}
+.sbox.hm.framed .sb-in{padding:21cqh 14cqw 12cqh 14cqw}
+html:has(body.shell),body.shell{overflow:auto!important;height:auto!important;-webkit-overflow-scrolling:touch}

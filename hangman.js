@@ -60,22 +60,22 @@
     var diffBtns = [['easy', 'Easy', 1], ['medium', 'Medium', 2], ['hard', 'Hard', 3]].map(function (d) {
       return '<button class="chip ' + d[0] + '" data-act="hdiff" data-v="' + d[0] + '" aria-pressed="' + (dl.indexOf(d[0]) !== -1) + '">' + d[1] + (flat ? '' : ' ' + d[2] + 'pt' + (d[2] > 1 ? 's' : '')) + '</button>';
     }).join('') + '<button class="chip mixed" data-act="hdiff" data-v="all" aria-pressed="' + (dl.length === 3) + '">Mixed (all)</button>';
-    var msg = custom ? (cw ? '<span class="help">' + cw + ' of your words ready</span>' : '<span class="notice warn">Type at least one word.</span>')
+    var msg = custom ? '<span class="help">You’ll type ' + (want || '?') + ' word' + (want === 1 ? '' : 's') + ', one at a time</span>'
       : avail === 0 ? '<span class="notice warn">No unused words left for these settings.</span>' : avail < want ? '<span class="notice">Only ' + avail + ' unused words match.</span>' : '<span class="help">' + avail + ' words available</span>';
     var c1 = '<div class="col">' + (App.embed ? '' : '<label class="lbl">How to play</label>' + seg('mode', [{ v: 'team', l: '🧩 Team' }, { v: 'vs', l: '⚔️ VS (first to solve)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode)) +
       '<label class="lbl">Words</label>' + seg('src', [{ v: 'random', l: '🎲 Random words' }, { v: 'custom', l: '✍️ My own words' }], s.src) +
-      (custom ? '<textarea rows="4" data-input="hwords" placeholder="One word or phrase per line.\nOptional clue: elephant | animal" style="margin-top:.4em">' + esc(s.words) + '</textarea>'
+      (custom ? '<p class="help">The host types each word when the game starts – viewers just see “Host is typing word…”.</p>'
         : '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label><div class="seg" role="group">' + diffBtns + '</div>') +
       '<label class="lbl">Points</label>' + seg('pointsMode', [{ v: 'diff', l: 'Harder = more points' }, { v: 'flat', l: 'Same for every word (1 pt)' }], s.pointsMode) + '</div>';
-    var c2 = '<div class="col">' + (custom ? '' : '<label class="lbl">Number of words</label>' + seg('count', countOpts, s.count) +
+    var c2 = '<div class="col">' + ('<label class="lbl">Number of words</label>' + seg('count', countOpts, s.count) +
       (s.count === 'custom' ? '<input type="number" min="1" max="200" inputmode="numeric" placeholder="How many?" value="' + esc(s.custom) + '" data-input="hcustom" style="margin-top:.4em">' : '')) +
       '<label class="lbl">Host plays along?</label>' + seg('hostPlay', [{ v: 0, l: 'No – host sees the word' }, { v: 1, l: '🙈 Yes – host can’t see it' }], s.hostPlay ? 1 : 0) +
-      (s.hostPlay ? '<p class="help">The word stays hidden from you and there’s no timer. Use <b>Reveal answer</b> to show it, then tap Next. (Hidden only works with random words.)</p>' :
+      (s.hostPlay ? '<p class="help">The word stays hidden from you and there’s no timer. <b>Reveal answer</b> shows it to you only; then <b>Reveal to stream</b> shows everyone. (Only works with random words.)</p>' :
         '<label class="lbl">Timer per word</label>' + seg('timer', [0, 60, 90, 120, 180, 300].map(function (t) { return { v: t, l: timerLabel(t) }; }).concat([{ v: 'custom', l: 'Custom' }]), s.timerCustom ? 'custom' : s.timer) +
         (s.timerCustom ? '<input type="number" min="5" max="3600" inputmode="numeric" placeholder="Seconds" value="' + esc(s.timer || '') + '" data-input="htimer" style="margin-top:.4em">' : '')) +
       '<label class="lbl">Category clue</label>' + seg('showCat', [{ v: 1, l: 'Show' }, { v: 0, l: 'Hide' }], s.showCat ? 1 : 0) +
-      '<p class="help" style="margin-top:.6em">💡 Hint button reveals a letter (-1 pt, never below 1).</p></div>';
-    return { cols: c1 + c2, msg: msg, ok: custom ? cw > 0 : avail > 0, want: want, dl: dl, cw: cw };
+      '</div>';
+    return { cols: c1 + c2, msg: msg, ok: custom ? !!want : avail > 0, want: want, dl: dl, cw: cw };
   }
   function renderHSetup(app) {
     App.setBackdrop('hsetup');
@@ -110,8 +110,10 @@
   /* ---------- start ---------- */
   App.actions['h-start'] = function () {
     var s = App.embed ? Object.assign({}, App.hsetup, { mode: 'stream' }) : App.hsetup, words = [], res = null;
-    if (s.src === 'custom') { words = parseCustom(s.words); if (!words.length) { App.toast('Type at least one word'); return; } }
-    else {
+    if (s.src === 'custom') {
+      var n = Math.min(wantCount(s), 100); if (!n) { App.toast('Enter how many words'); return; }
+      for (var i = 0; i < n; i++) words.push({ word: '', cat: 'Your word', difficulty: 'medium', bid: null, own: true, pending: true });
+    } else {
       var want = wantCount(s); if (!want) { App.toast('Enter how many words'); return; }
       res = Core.buildRiddles(pool(), diffList(s), Math.min(want, 200), App.hused);
       words = res.riddles.map(function (r) { return { word: r.word, cat: r.cat, difficulty: r.difficulty, bid: r.id }; });
@@ -123,7 +125,7 @@
       setup: clone(s), words: words, total: words.length, index: 0, rejected: [], finished: false, done: {},
       cur: fresh(), team: { score: 0, solved: 0, log: [] }, host: Core.newHostState(), started: Date.now()
     };
-    setTimer(); App.view = 'hplay'; hsave(); App.resetScroll = true; App.render();
+    if (!words[0].pending) setTimer(); App.view = 'hplay'; hsave(); App.resetScroll = true; App.render();
     if (res && res.shortfall) App.toast('Only ' + words.length + ' unused words available');
   };
 
@@ -172,17 +174,21 @@
     return '<div class="row hm-text"><input type="text" id="award-name" placeholder="Solved it? Winner’s name (+' + pts() + ') – Enter" autocomplete="off" autocapitalize="words" data-enter="h-award" class="grow"></div>';
   }
   function toolsRow(g, cur, stt) {
-    var t = '<button class="btn" data-act="h-copy-q">📋 Copy word</button>';
-    t += cur.hints >= 3 ? '<button class="btn on" disabled>💡 Hints used</button>' : '<button class="btn" data-act="h-hint">💡 Hint (-1 pt)</button>';
-    if (!g.hostPlay && g.src !== 'custom') t += '<button class="btn" data-act="h-swap">🔄 New word</button>';
-    if (!g.hostPlay) t += '<button class="btn" data-act="h-own">✍️ Own word</button>';
-    t += g.hostPlay ? '<button class="btn yellow" data-act="h-reveal">👁 Reveal answer</button>' : '<button class="btn" data-act="h-reveal">👁 Give up</button>';
-    var own = (!g.hostPlay && g.ownOpen && cur.status === 'play') ? '<div class="row hm-text"><input type="text" id="hg-own" placeholder="Type your own word or phrase – Enter" autocomplete="off" autocapitalize="characters" data-enter="h-own-set" class="grow"><button class="btn small primary" data-act="h-own-set">Use it</button></div>' : '';
-    return '<div class="row hm-tools">' + t + '</div>' + own;
+    var Wd = W(), t = '';
+    if (!Wd.pending) t += '<button class="btn" data-act="h-copy-q">📋 Copy word</button>';
+    t += '<button class="btn" data-act="h-swap">🎲 Random word</button>';
+    if (!g.hostPlay) t += '<button class="btn' + (g.ownOpen || Wd.pending ? ' on' : '') + '" data-act="h-own">✍️ My word</button>';
+    if (!Wd.pending) {
+      if (g.hostPlay) t += cur.peek ? '<button class="btn yellow" data-act="h-reveal">📺 Reveal answer to stream</button>' : '<button class="btn yellow" data-act="h-peek">👁 Reveal answer (only me)</button>';
+      else t += '<button class="btn" data-act="h-reveal">👁 Give up</button>';
+    }
+    var own = (!g.hostPlay && (g.ownOpen || Wd.pending) && cur.status === 'play') ? '<div class="row hm-text"><input type="text" id="hg-own" placeholder="Type your word or phrase – Enter" autocomplete="off" autocapitalize="characters" data-enter="h-own-set" class="grow"><button class="btn small primary" data-act="h-own-set">Use it</button></div>' : '';
+    return (Wd.pending ? own : '') + '<div class="row hm-tools">' + t + '</div>' + (Wd.pending ? '' : own);
   }
   function privWord(g, Wd, cur) {
     if (cur.status !== 'play') return '';
-    if (g.hostPlay) return '<div class="hm-priv locked">🔒 Word hidden – you’re playing along</div>';
+    if (Wd.pending) return '';
+    if (g.hostPlay && !cur.peek) return '<div class="hm-priv locked">🔒 Word hidden – you’re playing along</div>';
     return '<div class="hm-priv">🔒 Word (only you can see): <b>' + esc(Wd.word) + '</b>' + (g.showCat ? ' <small>· ' + esc(Wd.cat) + '</small>' : '') + '</div>';
   }
   function awardChips(g) {
@@ -217,6 +223,7 @@
     return '<div class="hm-info"><span class="pill">' + left + '</span>' + (g.showCat ? '<span class="pill cat">' + esc(Wd.cat) + '</span>' : '') + '<span class="pill pts">🎯 ' + p + ' pt' + (p === 1 ? '' : 's') + '</span><span class="pill">' + hearts(stt, g) + '</span>' + tmr + '</div>';
   }
   function boardHtml(g, Wd, cur, stt, stream) {
+    if (Wd.pending) return '<div class="hm-typing"><div class="hm-big">✍️</div><div class="hm-big">Host is typing the word…</div><p>Get ready to guess!</p></div>';
     var names = stream && g.mode === 'vs' && cur.status === 'won' ? winnersOf(g) : [];
     return headPills(g, Wd, cur, stt, stream) +
       '<div class="hm-main">' + (stt.stage ? '<img class="hm-img" src="' + App.imgUrl('hm' + (stt.stage - 1) + '.jpg') + '" alt="Hangman picture ' + stt.stage + ' of 6">' : '<div class="hm-img blank" aria-hidden="true"></div>') + (stream ? abcGrid(cur, Wd.word) : '') + '</div>' +
@@ -234,12 +241,13 @@
     var keepA = document.getElementById('award-name'), keepG = document.getElementById('hg-input'), ta = keepA ? keepA.value : '', tg = keepG ? keepG.value : '';
     if (g.stream) { renderHStream(app, ta, tg); return; }
     var Wd = W(), cur = C(), stt = st(), play = cur.status === 'play';
-    var tray = play ? privWord(g, Wd, cur) + keyboard(cur, stt, Wd.word) + textRow() + toolsRow(g, cur, stt) + awardRow(g) : afterBlock(g, cur, Wd);
+    var tray = play && Wd.pending ? toolsRow(g, cur, stt) : play ? privWord(g, Wd, cur) + keyboard(cur, stt, Wd.word) + textRow() + toolsRow(g, cur, stt) + awardRow(g) : afterBlock(g, cur, Wd);
     app.innerHTML = '<div class="v-hplay">' + App.hud('<button class="icon-btn quit-btn" data-act="h-quit" aria-label="Quit">✕ Quit</button>') +
       '<div class="zone hm-panel"><div class="hm-board">' + boardHtml(g, Wd, cur, stt, false) + '</div></div>' +
       '<div class="hm-tray">' + tray + minorRow(g) + '</div>' + drawer(g) + '</div>';
     restore(ta, tg);
-    if (g.timer && play) startTick();
+    if (g.timer && play && !Wd.pending) startTick();
+    if (play && Wd.pending) setTimeout(function () { var i = document.getElementById('hg-own'); if (i) i.focus(); }, 60);
   }
   function restore(ta, tg) {
     var a = document.getElementById('award-name'), b = document.getElementById('hg-input');
@@ -267,14 +275,14 @@
   }
   function checkEnd() { var s = st(); if (s.won) finish('won'); else if (s.lost) finish('lost'); }
   function guessLetter(c) {
-    var g = App.hgame; if (!g) return; var cur = C(); if (cur.status !== 'play') return;
+    var g = App.hgame; if (!g) return; var cur = C(); if (cur.status !== 'play' || W().pending) return;
     c = String(c).toUpperCase(); if (!/^[A-Z]$/.test(c) || cur.guessed.indexOf(c) !== -1) return;
     cur.guessed.push(c); checkEnd(); hsave(); App.render();
   }
   App.actions['h-letter'] = function (el) { guessLetter(el.dataset.c); };
   App.actions['h-text'] = function () {
     var g = App.hgame, inp = document.getElementById('hg-input'), v = inp ? Core.hmNorm(inp.value) : ''; if (!v) { App.toast('Type a letter or the word first'); return; }
-    var cur = C(); if (cur.status !== 'play') return;
+    var cur = C(); if (cur.status !== 'play' || W().pending) return;
     if (v.length === 1) { guessLetter(v); return; }
     if (v.replace(/[^A-Z]/g, '') === Core.hmNorm(W().word).replace(/[^A-Z]/g, '')) { Core.hmLetters(W().word).forEach(function (c) { if (cur.guessed.indexOf(c) === -1) cur.guessed.push(c); }); finish('won'); }
     else { cur.wrongWord++; App.toast('❌ ' + v + ' is not the word'); checkEnd(); }
@@ -286,13 +294,8 @@
     if (document.querySelector('#modal-root .modal')) return;
     if (/^[a-zA-Z]$/.test(ev.key)) guessLetter(ev.key);
   });
-  App.actions['h-hint'] = function () {
-    var g = App.hgame, cur = C(); if (cur.status !== 'play' || cur.hints >= 3) return;
-    var left = Core.hmLetters(W().word).filter(function (c) { return cur.guessed.indexOf(c) === -1; });
-    if (left.length < 2) { App.toast('Only one letter left – no more hints'); return; }
-    var c = left[Math.floor(Math.random() * left.length)]; cur.guessed.push(c); cur.hints++; checkEnd(); hsave(); App.render();
-    App.toast('💡 Revealed ' + c);
-  };
+  App.actions['h-hint'] = function () {};
+  App.actions['h-peek'] = function () { var cur = C(); if (cur.status !== 'play') return; cur.peek = true; hsave(); App.render(); };
   App.actions['h-reveal'] = function () { var cur = C(); if (cur.status !== 'play') return; finish('revealed'); hsave(); App.render(); };
   App.actions['h-copy-q'] = function () { var g = App.hgame, Wd = W(), cur = C(); App.copy(Core.hmCopy(g.tb ? 1 : g.index + 1, g.total, Wd.word, cur.guessed, g.showCat ? Wd.cat : '', st().wrongLetters), 'word'); };
   App.actions['h-copy-a'] = function () { var g = App.hgame, cur = C(); if (cur.status === 'play') return; App.copy(Core.hmResultCopy(g.index + 1, g.total, W().word, cur.status === 'won'), 'result'); };
@@ -300,16 +303,20 @@
   function swapOut(Wd) {
     var g = App.hgame, rej = g.rejected.concat(Wd.bid ? [Wd.bid] : []), inGame = g.words.map(function (w) { return w.bid; });
     var cand = BANK.filter(function (r) { return r.difficulty === Wd.difficulty && App.hflag.indexOf(r.id) === -1 && App.hused.indexOf(r.id) === -1 && inGame.indexOf(r.id) === -1 && rej.indexOf(r.id) === -1; });
-    if (!cand.length) { App.toast('No other ' + Wd.difficulty + ' word available'); return false; }
+    if (!cand.length) cand = BANK.filter(function (r) { return App.hflag.indexOf(r.id) === -1 && App.hused.indexOf(r.id) === -1 && inGame.indexOf(r.id) === -1 && rej.indexOf(r.id) === -1; });
+    if (!cand.length) { App.toast('No other word available'); return false; }
     var r = cand[Math.floor(Math.random() * cand.length)];
     g.rejected = rej; g.words[g.index] = { word: r.word, cat: r.cat, difficulty: r.difficulty, bid: r.id }; g.cur = fresh(); setTimer(); return true;
   }
   App.actions['h-swap'] = function () {
-    var g = App.hgame; if (g.hostPlay || g.tb || C().status !== 'play') return;
-    if (swapOut(W())) { hsave(); App.render(); }
+    var g = App.hgame; if (C().status !== 'play') return;
+    if (g.tb) { if (!tbPick(g)) return; setTimer(); hsave(); App.render(); return; }
+    var Wd = W(); if (Wd.pending) Wd = { difficulty: 'medium', bid: null };
+    if (swapOut(Wd)) { g.ownOpen = false; hsave(); App.render(); }
   };
   App.actions['h-own'] = function () {
     var g = App.hgame; if (g.hostPlay || C().status !== 'play') return;
+    if (W().pending) { var i0 = document.getElementById('hg-own'); if (i0) i0.focus(); return; }
     g.ownOpen = !g.ownOpen; App.render();
     setTimeout(function () { var i = document.getElementById('hg-own'); if (i) i.focus(); }, 30);
   };
@@ -389,13 +396,14 @@
   function renderHStream(app, ta, tg) {
     var g = App.hgame, Wd = W(), cur = C(), stt = st(), play = cur.status === 'play', p = pts();
     var box = sboxOpen() + boardHtml(g, Wd, cur, stt, true) + '</div></div>';
-    var priv = play ? (g.hostPlay ? '<div class="sc-ans locked"><div class="ans">🔒 Word hidden</div><div class="help">You’re playing along – tap Reveal answer when you’re ready.</div></div>'
+    var priv = play && Wd.pending ? '<div class="sc-ans"><div class="help">✍️ Viewers see “Host is typing word…”</div><div class="ans">Type your word below</div></div>' : play ? (g.hostPlay && !cur.peek ? '<div class="sc-ans locked"><div class="ans">🔒 Word hidden</div><div class="help">You’re playing along – tap Reveal answer when you’re ready.</div></div>'
       : '<div class="sc-ans"><div class="help">🔒 Private word – not shown on stream</div><div class="ans">' + esc(Wd.word) + '</div>' + (g.showCat ? '<div class="help">Category: ' + esc(Wd.cat) + '</div>' : '') + '</div>') : '';
-    var body = play ? keyboard(cur, stt, Wd.word) + textRow() + toolsRow(g, cur, stt) + awardRow(g) : '<div class="sc-ans"><div class="help">Word</div><div class="ans">' + esc(Wd.word) + '</div></div>' + afterBlock(g, cur, Wd);
+    var body = play && Wd.pending ? toolsRow(g, cur, stt) : play ? keyboard(cur, stt, Wd.word) + textRow() + toolsRow(g, cur, stt) + awardRow(g) : '<div class="sc-ans"><div class="help">Word</div><div class="ans">' + esc(Wd.word) + '</div></div>' + afterBlock(g, cur, Wd);
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">' + (g.tb ? '🤝 Tiebreaker' : (g.index === g.total - 1 ? 'Final word' : 'Word ' + (g.index + 1)) + ' of ' + g.total) + '</span><span class="pill pts">' + cap(Wd.difficulty) + ' · ' + p + ' pt' + (p === 1 ? '' : 's') + '</span><span class="grow"></span><button class="btn small" data-act="h-flag">🚩 Report</button><button class="btn small" data-act="h-quit">✕ Quit</button></div>' +
       priv + body + (g.tb ? '' : '<div class="sc-lb">' + vsBoard(g) + '</div>') + '</div>';
     streamLayout(app, box, ctl); restore(ta, tg);
-    if (g.timer && play) startTick();
+    if (g.timer && play && !Wd.pending) startTick();
+    if (play && Wd.pending) setTimeout(function () { var i = document.getElementById('hg-own'); if (i) i.focus(); }, 60);
   }
   function renderStreamLobby(app, s, f, start, links) {
     var flat = s.pointsMode === 'flat', custom = s.src === 'custom';
