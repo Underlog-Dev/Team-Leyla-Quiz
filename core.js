@@ -478,7 +478,61 @@
     };
   }
 
+  /* ---------- riddles ---------- */
+  /* points: base by difficulty (or flat), minus 1 per extra hint used, never below 1 */
+  function riddlePoints(difficulty, hintsUsed, flat) {
+    var base = flat > 0 ? flat : (BASE_POINTS[difficulty] || 1);
+    return Math.max(1, base - Math.max(0, hintsUsed || 0));
+  }
+  function riddleCopy(n, total, text) { return fitComment('Riddle ' + n + ': ' + cleanForTTS(text)); }
+  function riddleAnswerCopy(n, total, answer) {
+    return fitComment(n >= total ? 'CORRECT! The answer is ' + cleanForTTS(answer) + '. That\u2019s the end of the riddles!' : 'CORRECT! The answer is ' + cleanForTTS(answer) + '. Onto riddle ' + (n + 1));
+  }
+  function riddleHintCopy(n, k, hint) { return fitComment('Hint ' + k + ' for riddle ' + n + ': ' + cleanForTTS(hint)); }
+  function buildRiddles(bank, difficulty, count, usedIds, rng) {
+    var ds = Array.isArray(difficulty) ? difficulty : (difficulty && difficulty !== 'mixed' ? [difficulty] : DIFFICULTIES);
+    var used = toSet(usedIds);
+    var pool = shuffle(bank.filter(function (r) { return !used[r.id] && ds.indexOf(r.difficulty) !== -1; }), rng);
+    return { riddles: pool.slice(0, count), shortfall: Math.max(0, count - pool.length), available: pool.length };
+  }
+
+  /* ---------- Hangman ---------- */
+  function hmNorm(w) {
+    return String(w || '').normalize ? String(w || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z' \-]/g, '').replace(/\s+/g, ' ').trim() : String(w || '').toUpperCase().trim();
+  }
+  function hmLetters(word) { var seen = {}, out = []; hmNorm(word).split('').forEach(function (c) { if (c >= 'A' && c <= 'Z' && !seen[c]) { seen[c] = 1; out.push(c); } }); return out; }
+  function hmMask(word, guessed) {
+    var g = {}; (guessed || []).forEach(function (c) { g[c] = 1; });
+    return hmNorm(word).split('').map(function (c) { return (c >= 'A' && c <= 'Z') ? (g[c] ? c : '_') : c; });
+  }
+  function hmStage(wrong, lives) {
+    lives = lives || 5; if (wrong <= 0) return 0; if (wrong >= lives) return 5;
+    return Math.min(4, Math.max(1, Math.ceil(wrong * 5 / lives)));
+  }
+  function hmState(word, guessed, wrongWords, lives) {
+    var set = {}; hmLetters(word).forEach(function (c) { set[c] = 1; });
+    var wl = (guessed || []).filter(function (c) { return !set[c]; }), wrong = wl.length + (wrongWords || 0);
+    var won = hmLetters(word).every(function (c) { return (guessed || []).indexOf(c) !== -1; });
+    var lost = !won && wrong >= lives;
+    return { wrongLetters: wl, wrong: wrong, won: won, lost: lost, stage: hmStage(wrong, lives), left: Math.max(0, lives - wrong) };
+  }
+  function hmShow(word, guessed) {
+    return hmMask(word, guessed).map(function (c) { return c === ' ' ? '/' : c; }).join(' ');
+  }
+  function hmCopy(n, total, word, guessed, cat, wrongLetters) {
+    var len = hmLetters(word).length ? hmNorm(word).replace(/[^A-Z]/g, '').length : 0;
+    var t = 'Word ' + n + ': ' + hmShow(word, guessed) + ' (' + len + ' letters' + (cat ? ', ' + cat : '') + ')' + (wrongLetters && wrongLetters.length ? ' Wrong: ' + wrongLetters.join(' ') : '');
+    return fitComment(t);
+  }
+  function hmResultCopy(n, total, word, won) {
+    var w = hmNorm(word), tail = n >= total ? 'That’s the end of Hangman!' : 'Onto word ' + (n + 1);
+    return fitComment((won ? 'CORRECT! The word is ' : 'Out of lives! The word was ') + w + '. ' + tail);
+  }
+  function hmDifficulty(word) { var n = hmNorm(word).replace(/[^A-Z]/g, '').length; if (n >= 10) return 'hard'; if (n >= 7 && /[JQXZ]/.test(hmNorm(word))) return 'hard'; if (n >= 7) return 'medium'; return 'easy'; }
+
   return {
+    hmNorm: hmNorm, hmLetters: hmLetters, hmMask: hmMask, hmStage: hmStage, hmState: hmState, hmShow: hmShow, hmCopy: hmCopy, hmResultCopy: hmResultCopy, hmDifficulty: hmDifficulty,
+    riddlePoints: riddlePoints, riddleCopy: riddleCopy, riddleAnswerCopy: riddleAnswerCopy, riddleHintCopy: riddleHintCopy, buildRiddles: buildRiddles,
     BASE_POINTS: BASE_POINTS, DIFFICULTIES: DIFFICULTIES, DEFAULT_TEMPLATES: DEFAULT_TEMPLATES,
     availablePoints: availablePoints, ordinal: ordinal,
     questionCopy: questionCopy, answerCopy: answerCopy, hintCopy: hintCopy,

@@ -8,7 +8,7 @@
   var storage; try { storage = window.localStorage; storage.setItem('tlqh:t', '1'); storage.removeItem('tlqh:t'); } catch (e) { storage = Core.memoryStorage(); }
   var store = Core.makeStore(storage, 'tlqh:guest:');
 
-  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulty: ['easy', 'medium', 'hard'], pointsMode: 'diff', flatPts: 1, count: 20, custom: '', themes: [], subs: {}, timer: 0 };
+  var DEFAULT_SETUP = { mode: 'solo', format: 'open', difficulty: ['easy', 'medium', 'hard'], pointsMode: 'diff', flatPts: 1, count: 20, custom: '', themes: [], subs: {}, timer: 0, hostPlay: 0 };
   var DEFAULT_SETTINGS = { calm: false, editBeforeCopy: false };
 
   var App = window.App = {
@@ -77,17 +77,21 @@
 
   /* ---------- themed backdrop (your illustrated images) ---------- */
   var IMGDIR = '';
+  App.imgUrl = function (n) { return IMGDIR + n; };
   var IMG = {
     home: ['bg-home.jpg'], setup: ['bg-setup.jpg'], leader: ['bg-leader.jpg'],
     general: ['bg-general.jpg'], football: ['bg-football.jpg'], sports: ['bg-sports.jpg'], geography: ['bg-geography.jpg'],
     nature: ['bg-nature.jpg'], science: ['bg-science.jpg'], history: ['bg-history.jpg'], movies: ['bg-movies.jpg'],
     tv: ['bg-tv.jpg', 'bg-tv2.jpg'], music: ['bg-music.jpg'], celebrities: ['bg-celebrities.jpg'], gaming: ['bg-gaming.jpg'],
-    food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg']
+    food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg'],
+    mode: ['bg-mode.jpg'], rhome: ['bg-rhome.jpg'], rsetup: ['bg-rsetup.jpg'], rleader: ['bg-rleader.jpg'], riddle: ['bg-riddle.jpg'], hangman: ['bg-hangman.jpg']
   };
-  var BANNER = { home: 1, setup: 1, leader: 1 };
+  var BANNER = { home: 1, setup: 1, leader: 1, mode: 1, rhome: 1, rsetup: 1, rleader: 1 };
   var bgOn = 'bgA', lastKey = null, preloaded = {};
   var portraitMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null, lastArgs = null;
   function isPortrait() { return !!(portraitMQ && portraitMQ.matches); }
+  /* portrait art, also used as the Streamer Mode capture-box backdrop */
+  App.tallImg = function (key) { return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; };
   function imgUrl(key, variant) {
     var l = IMG[key] || IMG.general;
     if (isPortrait()) return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg';
@@ -122,7 +126,7 @@
     if (im.complete) show();
   };
   /* warm the cache with the page backgrounds so Home/Setup/Leaderboard appear instantly */
-  setTimeout(function () { ['home', 'setup', 'leader'].forEach(function (k) { App.preload(k); }); }, 1500);
+  setTimeout(function () { ['mode', 'home', 'setup', 'leader', 'rsetup', 'hangman'].forEach(function (k) { App.preload(k); }); }, 1500);
 
   /* ---------- pools ---------- */
   App.poolBank = function (s) {
@@ -141,14 +145,19 @@
 
   /* ---------- shell ---------- */
   App.hud = function (extra) {
-    var h = App.view !== 'home' ? '<button class="icon-btn" data-act="go-home" aria-label="Home">🏠</button>' : '';
+    var v = App.view, rv = !!(App.RVIEWS && App.RVIEWS[v]), hv = !!(App.HVIEWS && App.HVIEWS[v]);
+    var h = '';
+    /* 🏠 = the game's own home (quiz home / riddles home); 🎮 = Game Night, the main home screen */
+    if (v !== 'mode' && v !== 'home' && v !== 'rhome' && !hv) h += '<button class="icon-btn" data-act="' + (rv ? 'r-home' : 'go-home') + '" aria-label="Game home">🏠</button>';
+    if (v !== 'mode') h += '<button class="icon-btn" data-act="go-mode" aria-label="Game Night - choose a game">🎮</button>';
+    var stats = (rv && v !== 'mode') ? 'r-stats' : hv ? 'h-stats' : 'open-stats';
     return '<div class="hud">' + (extra || '') + h +
-      '<button class="icon-btn" data-act="open-stats" aria-label="Question bank statistics">📊</button>' +
+      '<button class="icon-btn" data-act="' + stats + '" aria-label="Statistics">📊</button>' +
       '<button class="icon-btn" data-act="open-settings" aria-label="Settings">⚙️</button></div>';
   };
   App.topbar = App.hud;
 
-  var SCROLLERS = '.zone, .sctl, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
+  var SCROLLERS = '.zone, .hm-tray, .sctl, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
   App.render = function () {
     var app = document.getElementById('app');
     /* keep scroll positions when a click only refreshes the same screen */
@@ -168,8 +177,13 @@
     document.body.classList.toggle('calm', !!App.settings.calm);
     var v = App.view;
     document.body.classList.remove('streamer');
+    var isH = !!(App.HVIEWS && App.HVIEWS[v] && App.renderRiddle);
+    var isR = isH || !!(App.RVIEWS && App.RVIEWS[v] && App.renderRiddle);
+    document.body.classList.toggle('riddle', isR && !isH && v !== 'mode');
+    document.body.classList.toggle('hangman', isH);
     if ((v === 'play' || v === 'results') && !App.game) v = App.view = 'home';
-    if (v === 'play') App.renderPlay(app);
+    if (isR) App.renderRiddle(v, app);
+    else if (v === 'play') App.renderPlay(app);
     else if (v === 'results') App.renderResults(app);
     else if (v === 'tiebreak') App.renderTiebreak(app);
     else if (v === 'setup') { App.setBackdrop('setup'); renderSetup(app); }
@@ -182,7 +196,7 @@
     var resume = App.game ? '<button class="btn yellow" data-act="resume">▶ Resume quiz</button>' : '';
     app.innerHTML = '<div class="v-home">' + App.hud() + '<div class="zone">' +
       '<button class="btn yellow play-btn" data-act="go-setup">▶ Play</button>' +
-      '<div class="home-links">' + resume + '<button class="btn" data-act="go-leader">🏆 Leaderboard</button></div>' +
+      '<div class="home-links">' + resume + '<button class="btn" data-act="go-leader">🏆 Leaderboard</button><button class="btn" data-act="go-mode">🔀 Switch game</button></div>' +
       '</div></div>';
   }
 
@@ -223,6 +237,7 @@
     else if (avail < want) msg = '<span class="notice">Only ' + avail + ' unused questions match.</span>';
     else msg = '<span class="help">' + avail + ' questions available</span>';
     var cols = '<div class="col"><label class="lbl">Game mode</label>' + seg('mode', [{ v: 'solo', l: '👤 Solo' }, { v: 'host', l: '👥 Host (multiplayer)' }, { v: 'stream', l: '🎥 Streamer (TikTok LIVE)' }], s.mode) +
+      (s.mode !== 'solo' ? '<label class="lbl">Host plays along?</label>' + seg('hostPlay', [{ v: 0, l: 'No – host sees answers' }, { v: 1, l: '🙈 Yes – host can’t see answers' }], s.hostPlay ? 1 : 0) + (s.hostPlay ? '<p class="help">The answer stays hidden from you. Type viewers’ answers in the <b>Check an answer</b> box, or tap <b>Reveal answer</b>.</p>' : '') : '') +
       '<label class="lbl">Answer format</label>' + seg('format', [{ v: 'open', l: 'Open answer' }, { v: 'mc', l: 'Multiple choice' }], s.format) +
       '<label class="lbl">Difficulty <span class="help">(pick one or more)</span></label>' + multi([
         { v: 'easy', l: 'Easy' + (flat ? '' : ' 1pt'), cls: 'easy', on: dl.indexOf('easy') !== -1 },
@@ -305,7 +320,7 @@
 
   App.actions.set = function (el) {
     var k = el.dataset.k, v = el.dataset.v;
-    App.setup[k] = (k === 'count' && v !== 'custom') || k === 'timer' || k === 'flatPts' ? parseInt(v, 10) : v;
+    App.setup[k] = (k === 'count' && v !== 'custom') || k === 'timer' || k === 'flatPts' || k === 'hostPlay' ? parseInt(v, 10) : v;
     App.save(); App.render();
   };
   App.actions.diff = function (el) {
@@ -384,7 +399,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     if (App.game && !BY_ID[App.game.ids[App.game.index]]) App.game = null;
-    App.view = 'home';
+    App.view = 'mode';
     App.render();
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
   });
