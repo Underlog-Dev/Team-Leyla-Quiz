@@ -128,6 +128,7 @@
   }
   /* host types a viewer's answer: wrong -> keep going; right -> ask who got it (VS/stream) or score the team */
   function checkBox(g, cur) {
+    if (!g.hostPlay) return "";
     return '<div class="row checkrow"><input type="text" id="try-ans" placeholder="Check an answer – type what was said, Enter" autocomplete="off" data-enter="r-try" class="grow"><button class="btn small primary" data-act="r-try">Check</button></div>' +
       (cur.tries && cur.tries.length ? '<div class="help tries">❌ Tried so far: ' + cur.tries.map(esc).join(' · ') + '</div>' : '');
   }
@@ -156,7 +157,7 @@
   App.actions['r-skip-winner'] = function () { App.closeModal(); App.rgame.cur.revealed = true; markUsed(R().id); rsave(); App.render(); };
   function lockedBox(g, Rd) {
     if (g.hostPlay) return '<div class="answerbox"><div>🔒 <b>Answer hidden</b> – you’re playing along</div></div>';
-    return '<div class="answerbox priv"><div class="help">🔒 Answer (only you can see this)</div><div class="ans">' + esc(Rd.answer) + '</div></div>';
+    return '<div class="answerbox priv"><div class="help">🔒 Answer (only you can see this)</div><div class="ans">' + esc(Rd.answer) + '</div><div class="row" style="justify-content:center;margin-top:6px"><button class="btn small primary" data-act="r-copy-a">📋 Copy answer</button></div></div>';
   }
   function answerBox(Rd) { return '<div class="answerbox revealed"><div class="help">Answer</div><div class="ans">' + esc(Rd.answer) + '</div></div>'; }
   function awardedChips(g) {
@@ -237,7 +238,7 @@
   };
   App.actions['r-reveal'] = function () { var c = App.rgame.cur; c.revealed = true; markUsed(R().id); rsave(); App.render(); };
   App.actions['r-copy-q'] = function () { var g = App.rgame; App.copy(Core.riddleCopy(g.index + 1, g.total, R().riddle), 'riddle'); };
-  App.actions['r-copy-a'] = function () { var g = App.rgame; if (!g.cur.revealed) return; App.copy(Core.riddleAnswerCopy(g.index + 1, g.total, R().answer), 'answer'); };
+  App.actions['r-copy-a'] = function () { var g = App.rgame; App.copy(Core.riddleAnswerCopy(g.index + 1, g.total, R().answer), 'answer'); };
   App.actions['r-copy-hint'] = function (el) { var g = App.rgame, k = parseInt(el.dataset.k, 10); if (!(k < g.cur.hints)) return; App.copy(Core.riddleHintCopy(g.index + 1, k + 1, R().hints[k]), 'hint'); };
   function swapOut(Rd, onlyIfFree) {
     var g = App.rgame, rej = g.rejected.concat([Rd.id]);
@@ -334,7 +335,7 @@
     var alts = (Rd.acceptedAnswers || []).filter(function (a) { return Core.normalizeText(a) !== Core.normalizeText(Rd.answer); }).slice(0, 4);
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">' + (last ? 'Final riddle' : 'Riddle ' + (g.index + 1)) + ' of ' + g.total + '</span><span class="pill pts">' + cap(Rd.difficulty) + ' · ' + p + ' pt' + (p === 1 ? '' : 's') + '</span><span class="grow"></span><button class="btn small" data-act="r-flag">🚩 Report</button><button class="btn small" data-act="r-quit">✕ Quit</button></div>' +
       (g.hostPlay && !cur.revealed ? '<div class="sc-ans locked"><div class="ans">🔒 Answer hidden</div><div class="help">You’re playing along – tap Reveal answer when you’re ready.</div></div>'
-        : '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream</div><div class="ans">' + esc(Rd.answer) + '</div>' + (alts.length ? '<div class="help">Also accepted: ' + esc(alts.join(' · ')) + '</div>' : '') + '</div>') +
+        : '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream</div><div class="ans">' + esc(Rd.answer) + '</div>' + '<div class="row" style="justify-content:center;margin-top:6px"><button class="btn small primary" data-act="r-copy-a">📋 Copy answer</button></div>' + (alts.length ? '<div class="help">Also accepted: ' + esc(alts.join(' · ')) + '</div>' : '') + '</div>') +
       '<div class="row sc-tools">' + hintBtn(cur).replace('(-1 pt)', '(-1 pt)') + '<button class="btn" data-act="r-copy-q">📋 Copy riddle</button>' + (cur.hints ? copyDot('r-copy-hint', 'Copy latest hint', cur.hints - 1) : '') + '<button class="btn" data-act="r-swap">🔄 Swap</button></div>' +
       (cur.revealed ? '' : checkBox(g, cur)) + '<div class="row" style="margin-top:10px"><input type="text" id="award-name" placeholder="Winner’s name – press Enter to show the answer (+' + p + ')" autocomplete="off" autocapitalize="words" data-enter="r-award" class="grow"></div>' + awardedChips(g) +
       '<div class="row" style="margin-top:8px">' + (cur.revealed ? '<button class="btn" data-act="r-unreveal">🙈 Hide answer from stream</button><button class="btn primary" data-act="r-copy-a">📋 Copy answer</button>' : (g.hostPlay ? '<button class="btn yellow big" data-act="r-award">👁 Reveal answer</button>' : '<button class="btn yellow" data-act="r-award">✅ Show answer (uses name above)</button>')) + '</div>' +

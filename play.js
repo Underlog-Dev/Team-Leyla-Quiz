@@ -82,7 +82,7 @@
       '<div class="sc-top"><span class="pill">' + (last ? 'Final question' : 'Question ' + (g.index + 1)) + ' of ' + g.total + '</span><span class="pill pts">' + esc(cap(Q.difficulty)) + ' · ' + pts + ' pt' + (pts === 1 ? '' : 's') + '</span>' +
       '<span class="grow"></span><button class="btn small" data-act="flag">🚩 Report wrong</button><button class="btn small" data-act="quit">✕ Quit</button></div>' +
       (g.hostPlay && !cur.revealed ? '<div class="sc-ans locked"><div class="ans">🔒 Answer hidden</div><div class="help">You’re playing along – type viewers’ answers below, or tap Reveal answer.</div></div>'
-        : '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream</div><div class="ans">' + esc(Q.answer) + '</div>' +
+        : '<div class="sc-ans"><div class="help">🔒 Private answer – not shown on stream</div><div class="ans">' + esc(Q.answer) + '</div>' + '<div class="row" style="justify-content:center;margin-top:6px"><button class="btn small primary" data-act="copy-a">📋 Copy answer</button></div>' +
           (answers.length ? '<div class="help">Also accepted: ' + esc(answers.join(' · ')) + '</div>' : '') + (Q.explanation ? '<div class="help">' + esc(Q.explanation) + '</div>' : '') + '</div>') +
       '<div class="row sc-tools"><button class="btn' + (cur.hint ? ' on' : '') + '" data-act="hint">💡 ' + (cur.hint ? 'Hint shown' : 'Show hint (-1 pt)') + '</button>' +
       (mcOn ? '<button class="btn on" disabled>🔠 Choices shown</button>' : (cur.answered ? '' : '<button class="btn" data-act="showmc">\uD83D\uDD20 Show multiple choice' + (g.flat ? '' : ' (1 pt)') + '</button>')) +
@@ -190,10 +190,11 @@
   /* host's private view of the answer - hidden completely when the host plays along */
   function privAnswer(g, Q) {
     if (g.hostPlay) return '<div class="answerbox"><div>🔒 <b>Answer hidden</b> – you’re playing along</div></div>';
-    return '<div class="answerbox priv"><div class="help">🔒 Answer (only you can see this)</div><div class="ans">' + esc(Q.answer) + '</div></div>';
+    return '<div class="answerbox priv"><div class="help">🔒 Answer (only you can see this)</div><div class="ans">' + esc(Q.answer) + '</div><div class="row" style="justify-content:center;margin-top:6px"><button class="btn small primary" data-act="copy-a">📋 Copy answer</button></div></div>';
   }
   function triesHtml(cur) { return cur.tries && cur.tries.length ? '<div class="help tries">❌ Tried so far: ' + cur.tries.map(esc).join(' · ') + '</div>' : ''; }
   function checkBox(g, cur) {
+    if (!g.hostPlay) return "";
     return '<div class="row checkrow"><input type="text" id="try-ans" placeholder="Check an answer – type what a viewer said, Enter" autocomplete="off" data-enter="try-answer" class="grow"><button class="btn small primary" data-act="try-answer">Check</button></div>' + triesHtml(cur);
   }
   function hostBody(Q, cur, last) {
@@ -327,7 +328,7 @@
     var b = document.querySelector('.answerbox'); if (b) b.classList.add('sparkle');
   };
   App.actions['copy-q'] = function () { var g = App.game; App.copy(Core.questionCopy(g.index + 1, g.total, q().question, App.templates), 'question'); };
-  App.actions['copy-a'] = function () { var g = App.game; if (!g.cur.revealed) return; App.copy(Core.answerCopy(g.index + 1, g.total, q().answer, App.templates), 'answer'); };
+  App.actions['copy-a'] = function () { var g = App.game; App.copy(Core.answerCopy(g.index + 1, g.total, q().answer, App.templates), 'answer'); };
   App.actions['copy-hint'] = function () { var g = App.game; if (!g.cur.hint) return; App.copy(Core.hintCopy(g.index + 1, q().hint, App.templates), 'hint'); };
   App.actions['copy-options'] = function () {
     var o = App.game.cur.options; App.copy(Core.optionsCopy(App.game.index + 1, o), 'options');
@@ -337,7 +338,7 @@
     var g = App.game, c = g.cur, Q = q();
     if (c.answered || (g.mode === 'host' && (g.host.awards[String(g.index)] || []).length)) { App.toast('This question is already scored'); return; }
     var rej = g.rejected.concat([Q.id]);
-    var rep = Core.findReplacement(App.poolBank(g.setup), Q, { usedIds: App.used, rejectedIds: rej, quizIds: g.ids, themes: [] });
+    var rep = Core.findReplacement(App.poolBank(g.setup), Q, { usedIds: App.used, rejectedIds: rej, quizIds: g.ids, themes: [], diversify: true });
     if (!rep) { App.toast('No other ' + Q.difficulty + ' question available for these themes'); return; }
     g.rejected = rej; g.ids[g.index] = rep.id; g.cur = fresh(); setTimer();
     App.save(); App.render();

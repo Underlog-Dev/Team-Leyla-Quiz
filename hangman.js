@@ -189,7 +189,7 @@
     if (cur.status !== 'play') return '';
     if (Wd.pending) return '';
     if (g.hostPlay && !cur.peek) return '<div class="hm-priv locked">🔒 Word hidden – you’re playing along</div>';
-    return '<div class="hm-priv">🔒 Word (only you can see): <b>' + esc(Wd.word) + '</b>' + (g.showCat ? ' <small>· ' + esc(Wd.cat) + '</small>' : '') + '</div>';
+    return '<div class="hm-priv">🔒 Word (only you can see): <b>' + esc(Wd.word) + '</b>' + (g.showCat ? ' <small>· ' + esc(Wd.cat) + '</small>' : '') + ' <button class="btn small primary" data-act="h-copy-w">📋 Copy answer</button></div>';
   }
   function awardChips(g) {
     var ids = g.host.awards[String(g.index)] || []; if (!ids.length) return '';
@@ -298,6 +298,7 @@
   App.actions['h-peek'] = function () { var cur = C(); if (cur.status !== 'play') return; cur.peek = true; hsave(); App.render(); };
   App.actions['h-reveal'] = function () { var cur = C(); if (cur.status !== 'play') return; finish('revealed'); hsave(); App.render(); };
   App.actions['h-copy-q'] = function () { var g = App.hgame, Wd = W(), cur = C(); App.copy(Core.hmCopy(g.tb ? 1 : g.index + 1, g.total, Wd.word, cur.guessed, g.showCat ? Wd.cat : '', st().wrongLetters), 'word'); };
+  App.actions['h-copy-w'] = function () { var g = App.hgame, Wd = W(); if (Wd.pending) return; App.copy(Core.fitComment('Answer: ' + Wd.word), 'answer'); };
   App.actions['h-copy-a'] = function () { var g = App.hgame, cur = C(); if (cur.status === 'play') return; App.copy(Core.hmResultCopy(g.index + 1, g.total, W().word, cur.status === 'won'), 'result'); };
 
   function swapOut(Wd) {
@@ -397,7 +398,7 @@
     var g = App.hgame, Wd = W(), cur = C(), stt = st(), play = cur.status === 'play', p = pts();
     var box = sboxOpen() + boardHtml(g, Wd, cur, stt, true) + '</div></div>';
     var priv = play && Wd.pending ? '<div class="sc-ans"><div class="help">✍️ Viewers see “Host is typing word…”</div><div class="ans">Type your word below</div></div>' : play ? (g.hostPlay && !cur.peek ? '<div class="sc-ans locked"><div class="ans">🔒 Word hidden</div><div class="help">You’re playing along – tap Reveal answer when you’re ready.</div></div>'
-      : '<div class="sc-ans"><div class="help">🔒 Private word – not shown on stream</div><div class="ans">' + esc(Wd.word) + '</div>' + (g.showCat ? '<div class="help">Category: ' + esc(Wd.cat) + '</div>' : '') + '</div>') : '';
+      : '<div class="sc-ans"><div class="help">🔒 Private word – not shown on stream</div><div class="ans">' + esc(Wd.word) + '</div>' + (g.showCat ? '<div class="help">Category: ' + esc(Wd.cat) + '</div>' : '') + '<div class="row" style="justify-content:center;margin-top:6px"><button class="btn small primary" data-act="h-copy-w">📋 Copy answer</button></div></div>') : '';
     var body = play && Wd.pending ? toolsRow(g, cur, stt) : play ? keyboard(cur, stt, Wd.word) + textRow() + toolsRow(g, cur, stt) + awardRow(g) : '<div class="sc-ans"><div class="help">Word</div><div class="ans">' + esc(Wd.word) + '</div></div>' + afterBlock(g, cur, Wd);
     var ctl = '<div class="sctl" id="sctl"><div class="sc-top"><span class="pill">' + (g.tb ? '🤝 Tiebreaker' : (g.index === g.total - 1 ? 'Final word' : 'Word ' + (g.index + 1)) + ' of ' + g.total) + '</span><span class="pill pts">' + cap(Wd.difficulty) + ' · ' + p + ' pt' + (p === 1 ? '' : 's') + '</span><span class="grow"></span><button class="btn small" data-act="h-flag">🚩 Report</button><button class="btn small" data-act="h-quit">✕ Quit</button></div>' +
       priv + body + (g.tb ? '' : '<div class="sc-lb">' + vsBoard(g) + '</div>') + '</div>';

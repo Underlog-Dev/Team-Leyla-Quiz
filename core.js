@@ -391,6 +391,15 @@
       var top = shuffled.slice(0, Math.max(1, Math.ceil(shuffled.length / 3)));
       return top[Math.floor((ctx.rng || Math.random)() * top.length)];
     }
+    if (ctx.diversify) {
+      var stem = function (q) { return String(q.question).toLowerCase().split(/\s+/).slice(0, 2).join(' '); };
+      var curStem = stem(current), quizSubs = {};
+      quizQs.forEach(function (p) { quizSubs[p.theme + '|' + p.subcategory] = 1; });
+      var diffSub = candidates.filter(function (q) { return !(q.theme === current.theme && q.subcategory === current.subcategory) && stem(q) !== curStem; });
+      var fresh = diffSub.filter(function (q) { return !quizSubs[q.theme + '|' + q.subcategory]; });
+      var anyOf = function (list) { return list.length ? shuffle(list, ctx.rng)[0] : null; };
+      return anyOf(fresh) || anyOf(diffSub) || anyOf(candidates.filter(function (q) { return stem(q) !== curStem; })) || anyOf(candidates);
+    }
     var sameSub = candidates.filter(function (q) { return q.theme === current.theme && q.subcategory === current.subcategory; });
     var sameTheme = candidates.filter(function (q) { return q.theme === current.theme; });
     return pickShortest(sameSub) || pickShortest(sameTheme) || null;
