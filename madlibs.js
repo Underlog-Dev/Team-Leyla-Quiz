@@ -138,9 +138,11 @@
   }
   function collectStrip(g, st) {
     var r = g.reqs[g.i];
-    if (st) return r.done ? '<div class="ml-strip done">✅ <b>' + esc(r.ans) + '</b>' + (r.user ? ' <small>@' + esc(r.user) + '</small>' : '') + '</div>' : '<div class="ml-strip">⌨️ Type your suggestions in chat!</div>';
+    var shown = r.done ? '<div class="ml-strip done">✅ ' + (r.user ? '<small>' + esc(r.user) + ' suggested</small> ' : '') + '<b>' + esc(r.ans) + '</b></div>' : '';
+    if (st) return shown || '<div class="ml-strip">✏️ Answer</div>';
+    if (g.adv && advT && r.done && g.editI == null) return shown;
     var d = g.draft && g.draft.i === g.i ? g.draft : null;
-    return '<div class="ml-ansrow"><button class="ml-ib" data-act="ml-random" aria-label="Random funny suggestion">🎲</button><input type="text" id="ml-ans" maxlength="' + ML.MAXLEN + '" placeholder="Type the answer you picked" value="' + esc(d ? d.ans : r.ans) + '" data-enter="ml-confirm" autocomplete="off" aria-label="Answer"><button class="ml-ib ok" data-act="ml-confirm" aria-label="Confirm answer">✅</button></div>';
+    return '<div class="ml-ansrow"><button class="ml-ib" data-act="ml-random" aria-label="Random funny suggestion">🎲</button><input type="text" id="ml-ans" maxlength="' + ML.MAXLEN + '" placeholder="Answer" value="' + esc(d ? d.ans : r.ans) + '" data-enter="ml-confirm" autocomplete="off" aria-label="Answer"><button class="ml-ib ok" data-act="ml-confirm" aria-label="Confirm answer">✅</button></div>';
   }
   function editList(g) {
     return '<div class="ml-edit">' + g.reqs.map(function (r, i) { return '<div class="ml-erow"><span class="n">' + (i + 1) + '</span><span class="p">' + esc(r.prompt) + '</span><b>' + (r.ans ? esc(r.ans) : '<em>empty</em>') + '</b><button class="btn small" data-act="ml-goto" data-i="' + i + '">✎</button></div>'; }).join('') + '</div>';
@@ -170,14 +172,26 @@
     var g = App.mgame; if (!g) return; sync(); var r = req(g), used = g.reqs.map(function (x) { return x.ans; });
     var a = ML.randomAnswer(BANKS, r.type, g.level, null, used.concat([g.draft && g.draft.ans])); g.draft = { i: g.editI != null ? g.editI : g.i, ans: a, user: '' }; save(); App.render();
   };
+  var advT = null;
+  function stopAdv(g) { if (advT) { clearTimeout(advT); advT = null; } if (g) g.adv = false; }
+  function advance(g) {
+    if (!g || App.mgame !== g || g.stage !== 'collect' || g.editI != null) return;
+    stopAdv(g); g.draft = null; g.helpK = null;
+    if (g.i < g.reqs.length - 1) g.i++; else if (ML.allDone(g)) g.stage = 'ready';
+    save(); App.render();
+  }
   function confirmNow(g, ans, user) {
+    stopAdv(g);
     var r = req(g); r.ans = ans; r.user = user; r.done = true; g.draft = null; g.helpK = null; App.closeModal();
     if (g.editI != null) { g.editI = null; if (g.stage === 'collect') g.editOpen = true; }
+    if (g.stage === 'collect' && g.editI == null) { g.adv = true; var gi = g.i; advT = setTimeout(function () { if (g.adv && g.i === gi) advance(g); }, 5000); }
     save(); App.render();
   }
   App.actions['ml-confirm'] = function () {
     var g = App.mgame; if (!g) return; sync(); var d = g.draft; var ans = ML.clean(d ? d.ans : '', ML.MAXLEN), user = ML.clean(d ? d.user : '', ML.MAXUSER).replace(/^@+/, '');
     if (!ans) { App.toast('Type an answer or tap Random first'); return; }
+    var bad = ML.checkWord(req(g).type, ans, BANKS, window.ML_POS);
+    if (bad) { App.toast(bad + ' Try another word.'); return; }
     if (ML.flagged(ans)) {
       g.pending = { ans: ans, user: user };
       App.openModal('<h2>⚠️ Heads up</h2><p>“' + esc(ans) + '” may break TikTok’s rules. It will <b>not</b> be changed unless you choose to.</p><div class="row"><button class="btn" data-act="ml-flag-use">Use it anyway</button><button class="btn primary" data-act="ml-flag-change">Pick something else</button></div>'); return;
@@ -186,9 +200,9 @@
   };
   App.actions['ml-flag-use'] = function () { var g = App.mgame, p = g && g.pending; App.closeModal(); if (p) { g.pending = null; confirmNow(g, p.ans, p.user); } };
   App.actions['ml-flag-change'] = function () { var g = App.mgame; if (g) g.pending = null; App.closeModal(); };
-  App.actions['ml-prev'] = function () { var g = App.mgame; sync(); if (g.editI != null) { g.editI = null; } else if (g.i > 0) g.i--; g.draft = null; g.helpK = null; save(); App.render(); };
+  App.actions['ml-prev'] = function () { var g = App.mgame; stopAdv(g); sync(); if (g.editI != null) { g.editI = null; } else if (g.i > 0) g.i--; g.draft = null; g.helpK = null; save(); App.render(); };
   App.actions['ml-next'] = function () {
-    var g = App.mgame; sync();
+    var g = App.mgame; stopAdv(g); sync();
     if (g.editI != null) { g.editI = null; g.draft = null; save(); App.render(); return; }
     var r = g.reqs[g.i]; if (!r.done) { App.toast('Confirm an answer first'); return; }
     g.draft = null; g.helpK = null; if (g.i < g.reqs.length - 1) g.i++; else if (ML.allDone(g)) { g.stage = 'ready'; } else App.toast('Some words are still empty – open the menu to fill them');
@@ -196,7 +210,7 @@
   };
   App.actions['ml-edit'] = function () { var g = App.mgame; sync(); g.editOpen = !g.editOpen; save(); App.render(); };
   App.actions['ml-goto'] = function (el) {
-    var g = App.mgame; sync(); var i = parseInt(el.dataset.i, 10); App.closeModal(); g.helpK = null;
+    var g = App.mgame; stopAdv(g); sync(); var i = parseInt(el.dataset.i, 10); App.closeModal(); g.helpK = null;
     if (g.stage === 'collect') { g.i = i; g.editI = null; } else { g.editI = i; if (!stream(g)) { g.draft = null; save(); App.render(); editModal(g); return; } }
     g.draft = null; save(); App.render();
   };

@@ -126,6 +126,31 @@
     return head + '\n' + items.map(lineText).join('\n') + '\n\n🎭 Team Leyla Mad Libs Theatre';
   }
 
+
+  /* ---------- word-type check: blocks an answer only when it is confidently the wrong kind of word ---------- */
+  var POSMAP = null;
+  function posMap(P) { if (POSMAP) return POSMAP; POSMAP = {}; Object.keys(P || {}).forEach(function (k) { P[k].split(' ').forEach(function (w) { if (w) POSMAP[w] = (POSMAP[w] | 0) | (+k); }); }); return POSMAP; }
+  var NUMW = '(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|trillion|dozen|score|once|twice|half|couple|few|several|infinity|googol|\\w*teen|\\w*ty)';
+  var NUMRE = new RegExp('\\d|\\b' + NUMW + '\\b', 'i'), MONEYRE = /£|\$|€|quid|pound|pence|penny|pennies|fiver|tenner|grand|shilling|cent|dollar|euro|\bbob\b|nickel|farthing|crown|guinea|coin|note|wallet|bag|purse|fortune|bill/i;
+  var IRREG = /(fish|sheep)$|^(men|women|children|people|mice|geese|teeth|feet|sheep|fish|deer|lice|oxen|cacti|fungi|data|series|species|moose|bison|swine|aircraft|trout|salmon|squid|knives|wives|lives|leaves|loaves|thieves|wolves|shelves|halves|calves|elves|selves|dice|criteria|phenomena|alumni|media|police|cattle|clothes|scissors|trousers|pants|jeans|shorts|glasses|pliers|tongs|goods|belongings|savings|brethren)$/i;
+  var AN = function (w) { return /^[aeiou]/i.test(w) ? 'an ' + w : 'a ' + w; };
+  function checkWord(type, text, banks, P) {
+    var b = banks[type]; if (!b) return '';
+    var t = String(text || '').trim(), toks = t.toLowerCase().match(/[a-z0-9£$€'-]+/g) || [], one = toks.length === 1 ? toks[0].replace(/^'+|'+$/g, '') : '';
+    var m = P ? posMap(P) : {}, g = b.g, mask = one ? (m[one] | 0) : 0;
+    function no(what) { return 'This is not ' + what + '.'; }
+    if (type === 'colour') return '';
+    if (g === 'adj') return mask & 2 ? no('an adjective') : '';
+    if (g === 'verb') return mask & 4 ? no('a verb') : '';
+    if (g === 'adv') return one && !/ly$/.test(one) && (mask & 8) ? no('an adverb') : '';
+    if (g === 'ing') return toks.length > 1 || toks.some(function (x) { return x.length >= 5 && /ing$/.test(x); }) ? '' : no('a verb ending in -ing');
+    if (g === 'pl') { var last = toks[toks.length - 1] || ''; return /s$/.test(last) || IRREG.test(last) ? '' : no('a plural noun'); }
+    if (g === 'num') return NUMRE.test(t) ? '' : no('a number');
+    if (g === 'money') return NUMRE.test(t) || MONEYRE.test(t) ? '' : no('an amount of money');
+    if (g === 'n') return mask & 1 ? no('a noun') : '';
+    return '';
+  }
+
   /* ---------- validation of a script (used by the build step and tests) ---------- */
   function validate(s, banks) {
     var e = [], keys = {}; if (!s.id) e.push('missing id');
@@ -146,6 +171,6 @@
   }
   function callbacks(s) { var c = {}; s.lines.forEach(function (l) { placeholders(l.t + ' ' + (l.a || '')).forEach(function (k) { c[k] = (c[k] || 0) + 1; }); }); return Object.keys(c).filter(function (k) { return c[k] > 1; }); }
 
-  return { LEVELS: LEVELS, LEVEL_CODE: LEVEL_CODE, LEN: LEN, MAXLEN: MAXLEN, MAXUSER: MAXUSER, ACTING: ACTING, clean: clean, flagged: flagged, article: article, applyMod: applyMod, segments: segments, placeholders: placeholders, plain: plain,
+  return { checkWord: checkWord, LEVELS: LEVELS, LEVEL_CODE: LEVEL_CODE, LEN: LEN, MAXLEN: MAXLEN, MAXUSER: MAXUSER, ACTING: ACTING, clean: clean, flagged: flagged, article: article, applyMod: applyMod, segments: segments, placeholders: placeholders, plain: plain,
     eligible: eligible, pickScript: pickScript, randomAnswer: randomAnswer, newGame: newGame, answersOf: answersOf, allDone: allDone, build: build, lineText: lineText, scriptText: scriptText, validate: validate, callbacks: callbacks, shuffle: shuffle, pick: pick, actorName: actorName };
 }));
