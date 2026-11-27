@@ -96,6 +96,10 @@
     food: ['bg-food.jpg'], tech: ['bg-tech.jpg'], space: ['bg-space.jpg'],
     mode: ['bg-mode.jpg'], rhome: ['bg-rhome.jpg'], rsetup: ['bg-rsetup.jpg'], rleader: ['bg-rleader.jpg'], riddle: ['bg-riddle.jpg'], hangman: ['bg-hangman.jpg'], hsetup: ['bg-hangman.jpg'], hleader: ['bg-hangman.jpg']
   };
+  /* Mad Libs Theatre artwork comes from data/madlibs-config.js (null = red-and-gold placeholder styling) */
+  var MLK = window.ML_ART || {};
+  Object.keys(MLK).forEach(function (k) { IMG[k] = [MLK[k].wide || '']; if (!THEMES[k]) THEMES[k] = { label: 'Mad Libs Theatre', icon: '🎭', c1: (window.ML_THEME || {}).c1 || '#8f1230', c2: (window.ML_THEME || {}).c2 || '#2a0610', decor: ['🎭','⭐','🎤'] }; });
+  function mlArt(key, tall) { return MLK[key] ? (tall ? MLK[key].tall : MLK[key].wide) ? IMGDIR + (tall ? MLK[key].tall : MLK[key].wide) : '' : null; }
   var BANNER = { home: 1, setup: 1, leader: 1, mode: 1, rhome: 1, rsetup: 1, rleader: 1 };
   var bgOn = 'bgA', lastKey = null, preloaded = {};
   var portraitMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null, lastArgs = null;
@@ -103,16 +107,18 @@
   /* portrait art, also used as the Streamer Mode capture-box backdrop */
   /* streamer box art: fetched once into memory (blob) so re-renders never re-download or flash a plain background */
   var artBlob = {};
-  App.tallImg = function (key) { var u = IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; return artBlob[u] || u; };
+  App.tallImg = function (key) { var ml = mlArt(key, true); if (ml !== null) return ml ? (artBlob[ml] || ml) : ''; var u = IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg'; return artBlob[u] || u; };
   App.warmArt = function () {
     if (!window.fetch || !window.URL || !URL.createObjectURL) return;
     Object.keys(IMG).forEach(function (k) {
+      if (mlArt(k, true) !== null) { var mu = mlArt(k, true); if (mu && !artBlob[mu]) fetch(mu).then(function (r) { return r.ok ? r.blob() : null; }).then(function (b) { if (b) artBlob[mu] = URL.createObjectURL(b); }).catch(function () {}); return; }
       var u = IMGDIR + 'bg-' + k + '-tall.jpg'; if (artBlob[u]) return;
       fetch(u).then(function (r) { return r.ok ? r.blob() : null; }).then(function (b) { if (b) artBlob[u] = URL.createObjectURL(b); }).catch(function () {});
     });
   };
   if (App.embed) setTimeout(App.warmArt, 0);
   function imgUrl(key, variant) {
+    var ml = mlArt(key, isPortrait()); if (ml !== null) return ml;
     var l = IMG[key] || IMG.general;
     if (isPortrait()) return IMGDIR + 'bg-' + (IMG[key] ? key : 'general') + '-tall.jpg';
     return IMGDIR + l[(variant || 0) % l.length];
@@ -123,7 +129,7 @@
   if (portraitMQ) { var onOri = function () { if (lastArgs) { lastKey = null; App.setBackdrop(lastArgs[0], lastArgs[1]); } };
     if (portraitMQ.addEventListener) portraitMQ.addEventListener('change', onOri); else if (portraitMQ.addListener) portraitMQ.addListener(onOri); }
   App.preload = function (key, variant) {
-    var u = imgUrl(key, variant); if (preloaded[u]) return; preloaded[u] = 1; var i = new Image(); i.src = u;
+    var u = imgUrl(key, variant); if (!u || preloaded[u]) return; preloaded[u] = 1; var i = new Image(); i.src = u;
   };
   var bgToken = 0;
   App.setBackdrop = function (key, variant) {
@@ -138,10 +144,11 @@
       if (done || token !== bgToken) return; done = true;
       var next = bgOn === 'bgA' ? 'bgB' : 'bgA';
       var el = document.getElementById(next), old = document.getElementById(bgOn);
-      el.style.backgroundImage = 'url(' + url + '), linear-gradient(160deg,' + th.c1 + ',' + th.c2 + ')';
-      document.getElementById('bgblur').style.backgroundImage = 'url(' + url + ')';
+      el.style.backgroundImage = (url ? 'url(' + url + '), ' : '') + 'linear-gradient(160deg,' + th.c1 + ',' + th.c2 + ')';
+      document.getElementById('bgblur').style.backgroundImage = url ? 'url(' + url + ')' : 'none';
       void el.offsetWidth; el.classList.add('on'); old.classList.remove('on'); bgOn = next;
     };
+    if (!url) { show(); return; }
     var im = new Image(); im.onload = show; im.onerror = show; im.src = url;
     if (im.complete) show();
   };
@@ -171,14 +178,14 @@
     if (v !== 'mode' && v !== 'home' && v !== 'rhome' && !hv) h += '<button class="icon-btn" data-act="' + (rv ? 'r-home' : 'go-home') + '" aria-label="Game home">🏠</button>';
     if (v !== 'mode') h += '<button class="icon-btn txt" data-act="go-mode" aria-label="Back to the game menu">🎮 Menu</button>';
     if (!App.embed) h += '<button class="icon-btn" data-act="open-stream-shell" aria-label="Streamer mode: switch on">🎥</button>';
-    var stats = (rv && v !== 'mode') ? 'r-stats' : hv ? 'h-stats' : 'open-stats';
+    var stats = (App.MVIEWS && App.MVIEWS[v]) ? 'ml-stats' : (rv && v !== 'mode') ? 'r-stats' : hv ? 'h-stats' : 'open-stats';
     return '<div class="hud">' + (extra || '') + h +
       '<button class="icon-btn" data-act="' + stats + '" aria-label="Statistics">📊</button>' +
       '<button class="icon-btn" data-act="open-settings" aria-label="Settings">⚙️</button></div>';
   };
   App.topbar = App.hud;
 
-  var SCROLLERS = '.zone, .hm-tray, .sctl, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
+  var SCROLLERS = '.ml-scroll, .zone, .hm-tray, .sctl, .setup-grid .col, .drawer-in, .lb-scroll, .qcard, .modal';
   App.render = function () {
     var app = document.getElementById('app');
     /* keep scroll positions when a click only refreshes the same screen */
@@ -202,7 +209,9 @@
     var isH = !!(App.HVIEWS && App.HVIEWS[v] && App.renderRiddle);
     var isR = isH || !!(App.RVIEWS && App.RVIEWS[v] && App.renderRiddle);
     document.body.classList.toggle('riddle', isR && !isH && v !== 'mode');
-    document.body.classList.toggle('hangman', isH);
+    var isM = !!(App.MVIEWS && App.MVIEWS[v]);
+    document.body.classList.toggle('hangman', isH && !isM);
+    document.body.classList.toggle('madlibs', isM);
     if ((v === 'play' || v === 'results') && !App.game) v = App.view = 'home';
     if (isR) App.renderRiddle(v, app);
     else if (v === 'play') App.renderPlay(app);

@@ -2,13 +2,13 @@
 <style>body{font-family:-apple-system,sans-serif;margin:16px;background:#12062f;color:#fff}h1{font-size:1.3rem}.r{padding:6px 10px;margin:4px 0;border-radius:8px;background:rgba(255,255,255,.1);display:flex;justify-content:space-between;gap:8px}.ok{border-left:6px solid #2ecc71}.no{border-left:6px solid #ff4d6d;background:rgba(255,77,109,.25)}#sum{font-size:1.1rem;margin:12px 0;font-weight:700}</style></head><body>
 <h1>🐣 Team Leyla – upload check</h1><div id="sum">Checking…</div><div id="out"></div>
 <script>
-var FILES=['index.html','stream.html','style.css','app.js','core.js','themes.js','play.js','riddle.js','riddles.js','hangman.js','hangman-words.js','questions.js','tiebreakers.js','sw.js','manifest.webmanifest',
+var FILES=['index.html','stream.html','style.css','app.js','core.js','themes.js','play.js','riddle.js','riddles.js','hangman.js','hangman-words.js','madlibs-engine.js','madlibs.js','madlibs-banks.js','madlibs-scripts.js','madlibs-config.js','questions.js','tiebreakers.js','sw.js','manifest.webmanifest',
 'bg-hsetup-tall.jpg','bg-hleader-tall.jpg','bg-mode.jpg','bg-mode-tall.jpg','bg-home.jpg','bg-home-tall.jpg','bg-setup.jpg','bg-setup-tall.jpg','bg-leader.jpg','bg-leader-tall.jpg','bg-rhome.jpg','bg-rhome-tall.jpg','bg-rsetup.jpg','bg-rsetup-tall.jpg','bg-rleader.jpg','bg-rleader-tall.jpg','bg-riddle.jpg','bg-riddle-tall.jpg','bg-hangman.jpg','bg-hangman-tall.jpg','hm0.jpg','hm1.jpg','hm2.jpg','hm3.jpg','hm4.jpg','hm5.jpg'];
 var bad=0,done=0,out=document.getElementById('out');
 FILES.forEach(function(f){fetch(f+'?x='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text().then(function(t){return {ok:true,len:t.length,t:t}}):{ok:false,s:r.status}}).catch(function(){return {ok:false,s:'error'}}).then(function(r){
  var d=document.createElement('div');d.className='r '+(r.ok?'ok':'no');d.innerHTML='<span>'+f+'</span><b>'+(r.ok?'✅':'❌ missing ('+r.s+')')+'</b>';out.appendChild(d);
  if(!r.ok)bad++;
- if(r.ok&&f==='index.html'){['riddle.js','hangman.js','hangman-words.js'].forEach(function(n){if(r.t.indexOf(n)<0){var e=document.createElement('div');e.className='r no';e.innerHTML='<span>index.html is the OLD one – no '+n+'</span><b>❌</b>';out.insertBefore(e,out.firstChild);bad++;}})}
+ if(r.ok&&f==='index.html'){['riddle.js','hangman.js','hangman-words.js','madlibs.js','madlibs-scripts.js'].forEach(function(n){if(r.t.indexOf(n)<0){var e=document.createElement('div');e.className='r no';e.innerHTML='<span>index.html is the OLD one – no '+n+'</span><b>❌</b>';out.insertBefore(e,out.firstChild);bad++;}})}
  if(++done===FILES.length)document.getElementById('sum').textContent=bad?('❌ '+bad+' problem(s) – re-upload the red files (and index.html if it says OLD), then Commit.'):'✅ All files are on the site. If the app still looks old, fully close it and reopen.';
 });});
 </script></body></html>

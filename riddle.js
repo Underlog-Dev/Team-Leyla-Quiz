@@ -44,7 +44,8 @@
     app.innerHTML = '<div class="v-mode">' + App.hud() +
       '<button class="hit hit-quiz" data-act="pick-quiz" aria-label="Play Quiz"></button>' +
       '<button class="hit hit-riddles" data-act="pick-riddles" aria-label="Play Riddles"></button>' +
-      '<button class="hit hit-hangman" data-act="pick-hangman" aria-label="Play Hangman"></button></div>';
+      '<button class="hit hit-hangman" data-act="pick-hangman" aria-label="Play Hangman"></button>' +
+      '<button class="hit hit-madlibs" data-act="pick-madlibs" aria-label="Play Mad Libs Theatre"></button></div>';
   }
   function renderRHome(app) {
     App.setBackdrop('rhome');
