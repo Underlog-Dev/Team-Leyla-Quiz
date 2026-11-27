@@ -1,14 +1,14 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Team Leyla – Streamer mode</title>
 <link rel="icon" href="icon-192.png"><link rel="stylesheet" href="style.css">
-<style>html,body{overflow:auto!important;height:auto!important}body.shell{background:#12062f;position:static!important}</style></head>
-<body class="shell"><div class="shell-wrap">
+<style>body>.shell-top{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}html,body{overflow:auto!important;height:auto!important}body.shell{background:#12062f;position:static!important}</style></head>
+<body class="shell"><div class="shell-top" id="top"><button class="btn primary menu" data-shell="menu">🎮 Return to menu</button><a class="btn small cam" href="index.html" onclick="try{sessionStorage.setItem('tl-switch','1')}catch(e){}" title="Switch streamer mode off">🎥 Streamer ON – tap to switch off</a></div><div class="shell-wrap">
 <div class="shell-box"><iframe id="game" src="index.html?embed=1" title="Team Leyla game"></iframe></div>
 <div class="shell-side" id="side"></div></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 (function(){
   var f=document.getElementById('game'), side=document.getElementById('side'), toastEl=document.getElementById('toast'), tt;
-  var TOP='<div class="shell-top" id="top"><button class="btn primary menu" data-shell="menu">🎮 Return to menu</button><a class="btn small cam" href="index.html" title="Switch streamer mode off">🎥 Streamer ON – tap to switch off</a></div>';var IDLE=TOP+'<div class="shell-note"><h2>🎥 Streamer mode</h2>Add this page to <b>TikTok LIVE Studio</b> and capture <b>only the gold-edged box</b>. Everything inside it is what viewers see – use the game screens in the box to pick a game and set it up. When a game is running, your <b>private controls appear here</b> (answers, buttons, copy). Everything outside the box stays private.</div>';
+  var TOP='';var IDLE=TOP+'<div class="shell-note"><h2>🎥 Streamer mode</h2>Add this page to <b>TikTok LIVE Studio</b> and capture <b>only the gold-edged box</b>. Everything inside it is what viewers see – use the game screens in the box to pick a game and set it up. When a game is running, your <b>private controls appear here</b> (answers, buttons, copy). Everything outside the box stays private.</div>';
   function toast(m){toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){toastEl.classList.remove('show')},1800)}
   function copy(t){var ok=false;try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t);ok=true}}catch(e){}
     if(!ok){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove()}}

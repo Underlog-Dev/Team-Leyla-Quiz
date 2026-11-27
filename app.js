@@ -177,7 +177,7 @@
     /* 🏠 = the game's own home (quiz home / riddles home); 🎮 = Game Night, the main home screen */
     if (v !== 'mode' && v !== 'home' && v !== 'rhome' && !hv) h += '<button class="icon-btn" data-act="' + (rv ? 'r-home' : 'go-home') + '" aria-label="Game home">🏠</button>';
     if (v !== 'mode') h += '<button class="icon-btn txt" data-act="go-mode" aria-label="Back to the game menu">🎮 Menu</button>';
-    if (!App.embed) h += '<button class="icon-btn" data-act="open-stream-shell" aria-label="Streamer mode: switch on">🎥</button>';
+    if (!App.embed) h += '<button class="icon-btn txt" data-act="open-stream-shell" aria-label="Streamer mode: switch on">🎥 Streamer</button>';
     var stats = (App.MVIEWS && App.MVIEWS[v]) ? 'ml-stats' : (rv && v !== 'mode') ? 'r-stats' : hv ? 'h-stats' : 'open-stats';
     return '<div class="hud">' + (extra || '') + h +
       '<button class="icon-btn" data-act="' + stats + '" aria-label="Statistics">📊</button>' +
@@ -345,7 +345,7 @@
     App.copy(Core.leaderboardCopy(h.players.map(function (p, i) { return { id: 'h' + i, name: p.name, score: p.score }; }), App.templates), 'leaderboard');
   };
   App.actions['clear-lb'] = function () { if (window.confirm('Clear saved leaderboards on this device?')) { App.hist = []; App.alltime = {}; store.set('hist', []); store.set('alltime', {}); App.render(); } };
-  App.actions['open-stream-shell'] = function () { location.href = 'stream.html'; };
+  App.actions['open-stream-shell'] = function () { try { sessionStorage.setItem('tl-switch', '1'); } catch (e) {} location.href = 'stream.html'; };
   App.actions['go-home'] = function () { App.view = 'home'; App.render(); window.scrollTo(0, 0); };
   App.actions['go-setup'] = function () { App.view = 'setup'; App.render(); window.scrollTo(0, 0); };
   App.actions['go-leader'] = function () { App.view = 'leader'; App.render(); window.scrollTo(0, 0); };

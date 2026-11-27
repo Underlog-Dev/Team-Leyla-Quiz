@@ -44,7 +44,9 @@
       if (m.index > last) out.push({ t: 'text', v: tpl.slice(last, m.index) });
       var ans = answers[m[1]];
       if (ans == null || ans === '') { if (strict) throw new Error('no answer for ' + m[1]); ans = '___'; }
-      out.push({ t: 'w', k: m[1], v: applyMod(ans, m[2]), raw: ans });
+      var shown = ans, prev = tpl.slice(0, m.index);   /* the script already says "you": don't say it twice ("You you buffoon") */
+      if (/\byou\s+$/i.test(prev)) { var cut = shown.replace(/^you(?:'re|\s+are)?[\s,]+(?:(?:a|an|the)\s+)?/i, ''); if (cut) shown = cut; }
+      out.push({ t: 'w', k: m[1], v: applyMod(shown, m[2]), raw: ans });
       last = m.index + m[0].length;
     }
     if (last < tpl.length) out.push({ t: 'text', v: tpl.slice(last) });

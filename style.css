@@ -782,3 +782,9 @@ body.madlibs .sctl{background:rgba(42,6,16,.78);border-color:rgba(255,217,61,.5)
 .sctl .ml-fin-btns{display:flex;flex-direction:column;width:100%;margin-top:.6em}
 .sctl .ml-fin-btns .btn.big{font-size:1em;flex-direction:column;padding:.7em}
 .sctl .ml-fin-btns .btn small{font-size:.75em}
+
+.shell-top{position:sticky;top:0;z-index:50;background:#12062f;padding:6px 0}
+.ml-pn .ml-ansrow{height:auto;width:92%;margin:1.6cqh auto 0;padding:.5em .6em;gap:.5em;background:#fff8e1;border:2px solid #f2c14e;border-radius:1em}
+.ml-pn .ml-ansrow input{height:2.4em;font-size:max(16px,5.4cqmin);color:#3a0610;text-align:center}
+.ml-pn .ml-ansrow .ml-ib{width:2.4em;height:2.4em;min-width:38px;min-height:38px;font-size:max(15px,4.6cqmin)}
+.ml-strip.done b{font-size:1.1em}

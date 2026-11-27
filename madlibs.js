@@ -127,22 +127,24 @@
   App.actions['ml-help'] = function () { var g = App.mgame; if (!g) return; sync(); var r = req(g); g.helpK = g.helpK === r.k ? null : r.k; save(); App.render(); };
 
   /* ---------- collection ---------- */
+  function ansRow(g, r) {
+    var d = g.draft && g.draft.i === g.i ? g.draft : null;
+    return '<div class="ml-ansrow"><button class="ml-ib" data-act="ml-random" aria-label="Random funny suggestion">🎲</button><input type="text" id="ml-ans" maxlength="' + ML.MAXLEN + '" placeholder="Answer" value="' + esc(d ? d.ans : r.ans) + '" data-enter="ml-confirm" autocomplete="off" aria-label="Answer"><button class="ml-ib ok" data-act="ml-confirm" aria-label="Confirm answer">✅</button></div>';
+  }
   function collectPanel(g, st) {
     var r = g.reqs[g.i], n = g.reqs.length, long = r.prompt.length > 62 ? ' vlong' : r.prompt.length > 40 ? ' long' : '';
     var h = '<div class="ml-count">Word ' + (g.i + 1) + ' of ' + n + '</div><div class="ml-need">CHAT, WE NEED…</div><div class="ml-prompt' + long + '">' + promptHtml(r, g) + '</div>';
+    var showing = r.done && (st || (g.adv && advT && g.editI == null));
     if (g.helpK === r.k) h += helpCard(r);
-    else if (r.done) h += '<div class="ml-chosen"><div class="ml-tick">✅ CHOSEN</div><div class="ml-answer' + (r.ans.length > 40 ? ' long' : '') + '">' + esc(r.ans) + '</div>' + (r.user ? '<div class="ml-by">suggested by <b>@' + esc(r.user) + '</b> 🌟</div>' : '') + '</div>';
+    else if (!st && !showing) h += ansRow(g, r);
+    else if (showing) h += '<div class="ml-chosen"><div class="ml-tick">✅ CHOSEN</div><div class="ml-answer' + (r.ans.length > 40 ? ' long' : '') + '">' + esc(r.ans) + '</div>' + '</div>';
     else h += '<div class="ml-dots">' + g.reqs.map(function (x, i) { return '<i class="' + (x.done ? 'on' : '') + (i === g.i ? ' cur' : '') + '"></i>'; }).join('') + '</div>';
     if (!st) h += '<div class="ml-host"><button class="ml-ib" data-act="ml-prev" aria-label="Previous word"' + (g.i === 0 ? ' disabled' : '') + '>◀</button><input type="text" id="ml-user" maxlength="' + ML.MAXUSER + '" placeholder="@ chat username (optional)" value="' + esc(g.draft && g.draft.i === g.i ? g.draft.user : r.user) + '" data-enter="ml-confirm" autocomplete="off" autocapitalize="off" aria-label="Chat username"><button class="ml-ib" data-act="ml-next" aria-label="Next word">▶</button><button class="ml-ib" data-act="ml-menu" aria-label="More">☰</button></div>';
     return '<div class="ml-pn">' + h + '</div>';
   }
   function collectStrip(g, st) {
-    var r = g.reqs[g.i];
-    var shown = r.done ? '<div class="ml-strip done">✅ ' + (r.user ? '<small>' + esc(r.user) + ' suggested</small> ' : '') + '<b>' + esc(r.ans) + '</b></div>' : '';
-    if (st) return shown || '<div class="ml-strip">✏️ Answer</div>';
-    if (g.adv && advT && r.done && g.editI == null) return shown;
-    var d = g.draft && g.draft.i === g.i ? g.draft : null;
-    return '<div class="ml-ansrow"><button class="ml-ib" data-act="ml-random" aria-label="Random funny suggestion">🎲</button><input type="text" id="ml-ans" maxlength="' + ML.MAXLEN + '" placeholder="Answer" value="' + esc(d ? d.ans : r.ans) + '" data-enter="ml-confirm" autocomplete="off" aria-label="Answer"><button class="ml-ib ok" data-act="ml-confirm" aria-label="Confirm answer">✅</button></div>';
+    var r = g.reqs[g.i], who = r.done && r.user && !(g.editI != null) ? '<div class="ml-strip done"><b>' + esc(r.user) + '</b></div>' : '<div class="ml-strip"></div>';
+    return who;
   }
   function editList(g) {
     return '<div class="ml-edit">' + g.reqs.map(function (r, i) { return '<div class="ml-erow"><span class="n">' + (i + 1) + '</span><span class="p">' + esc(r.prompt) + '</span><b>' + (r.ans ? esc(r.ans) : '<em>empty</em>') + '</b><button class="btn small" data-act="ml-goto" data-i="' + i + '">✎</button></div>'; }).join('') + '</div>';
@@ -358,6 +360,12 @@
     App.openModal('<h2>🎭 Mad Libs Theatre</h2><p><b>' + App.mdone.length + '</b> of ' + SCRIPTS.length + ' scripts performed</p><div class="ml-stats">' + Object.keys(by).sort().map(function (c) { return '<div class="ml-erow"><span class="p">' + esc(c) + '</span><b>' + by[c][0] + ' / ' + by[c][1] + '</b></div>'; }).join('') + '</div><div class="row"><button class="btn" data-act="ml-reset-hist2">♻️ Reset played history</button><button class="btn primary" data-act="close-modal">Close</button></div>');
   };
   App.actions['ml-reset-hist2'] = function () { App.closeModal(); App.actions['ml-reset-hist'](); };
+
+  /* switching between streamer mode and private mode mid-game keeps the show going */
+  document.addEventListener('DOMContentLoaded', function () {
+    var f = false; try { f = sessionStorage.getItem('tl-switch'); sessionStorage.removeItem('tl-switch'); } catch (e) {}
+    if (f && App.mgame && !App.game) { App.view = 'mlplay'; App.render(); }
+  });
 
   /* ---------- router ---------- */
   App.actions['go-madlibs'] = App.actions['pick-madlibs'];
